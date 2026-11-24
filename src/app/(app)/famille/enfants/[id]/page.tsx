@@ -32,13 +32,6 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
         action={<Link href={`/listes/${id}`} className="btn-primary shrink-0">Sa liste</Link>}
       />
 
-      <Section title="Prénom">
-        <form action={renameMember.bind(null, id)} className="card flex gap-2 p-4">
-          <input type="hidden" name="back" value={back} />
-          <input name="name" className="field" defaultValue={child.display_name} required maxLength={60} aria-label="Prénom" />
-          <SubmitButton className="btn-secondary shrink-0">Enregistrer</SubmitButton>
-        </form>
-      </Section>
 
       <Section
         title="Connexion"
@@ -114,6 +107,17 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
         )}
       </Section>
 
+      <details className="mb-10">
+        <summary className="cursor-pointer text-sm font-bold text-muted hover:text-ink">⚙️ Plus d&apos;options ▾</summary>
+        <div className="mt-6">
+      <Section title="Prénom">
+        <form action={renameMember.bind(null, id)} className="card flex gap-2 p-4">
+          <input type="hidden" name="back" value={back} />
+          <input name="name" className="field" defaultValue={child.display_name} required maxLength={60} aria-label="Prénom" />
+          <SubmitButton className="btn-secondary shrink-0">Enregistrer</SubmitButton>
+        </form>
+      </Section>
+
       <Section title="Émanciper" description={`${child.display_name} devient autonome : il gère seul sa liste et sa visibilité. Les parents perdent l'accès aux réglages.`}>
         {child.login ? (
           <form action={emancipate.bind(null, id)}>
@@ -144,6 +148,8 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
           </ConfirmButton>
         </form>
       </Section>
+        </div>
+      </details>
     </>
   );
 }

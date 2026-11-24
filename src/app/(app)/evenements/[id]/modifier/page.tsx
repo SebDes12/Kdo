@@ -15,9 +15,11 @@ export const metadata: Metadata = { title: "Modifier l'événement" };
 export default async function EditEventPage({ params }: PageProps<"/evenements/[id]/modifier">) {
   const { id } = await params;
   const session = await getSession();
-  const { q, me } = session;
-  const [ev] = isUuid(id) ? await q<EventRow>(`${EVENTS_SQL} where e.id = $1`, [id]) : [];
-  if (!ev || ev.created_by !== me.id) notFound();
+  const { q } = session;
+  const [ev] = isUuid(id)
+    ? await q<EventRow & { manage: boolean }>(`select x.*, can_manage_event(x.id) as manage from (${EVENTS_SQL} where e.id = $1) x`, [id])
+    : [];
+  if (!ev || !ev.manage || ev.deleted_at) notFound();
 
   return (
     <>

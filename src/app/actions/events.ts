@@ -54,16 +54,21 @@ export async function updateEvent(eventId: string, fd: FormData) {
       return true;
     }),
   );
-  if (!updated) redirectError(back, "Seul le créateur peut modifier");
+  if (!updated) redirectError(back, "Seuls le créateur et les administrateurs du groupe peuvent modifier");
   revalidatePath("/", "layout");
   redirectOk(`/evenements/${eventId}`, "Événement modifié");
 }
 
 export async function deleteEvent(eventId: string) {
   const { q } = await getSession();
-  const back = `/evenements/${eventId}/modifier`;
-  const rows = await attempt(back, () => q("delete from events where id = $1 returning id", [eventId]));
-  if (!rows.length) redirectError(back, "Seul le créateur peut supprimer");
+  await attempt(`/evenements/${eventId}/modifier`, () => q("select delete_event($1)", [eventId]));
   revalidatePath("/", "layout");
-  redirectOk("/", "Événement supprimé");
+  redirectOk("/", "Événement mis à la corbeille (restaurable pendant 30 jours)");
+}
+
+export async function restoreEvent(eventId: string) {
+  const { q } = await getSession();
+  await attempt(`/evenements/${eventId}`, () => q("select restore_event($1)", [eventId]));
+  revalidatePath("/", "layout");
+  redirectOk(`/evenements/${eventId}`, "Événement restauré");
 }

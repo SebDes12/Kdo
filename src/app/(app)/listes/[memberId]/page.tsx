@@ -24,8 +24,8 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
     ideas: await q<Idea>(`${IDEAS_SQL} where i.beneficiary_id = $1 and i.deleted_at is null`, [memberId]),
     events: await q<EventRow>(
       `${EVENTS_SQL}
-       where ${memberInEvent("$1")}
-          or e.id in (select event_id from ideas where beneficiary_id = $1)
+       where e.deleted_at is null
+         and (${memberInEvent("$1")} or e.id in (select event_id from ideas where beneficiary_id = $1))
        order by e.event_date`,
       [memberId],
     ),

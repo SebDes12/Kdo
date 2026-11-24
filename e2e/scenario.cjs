@@ -24,24 +24,35 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.fill("#name", "Seb"); await papa.fill("#email", "papa@test.fr"); await papa.fill("#password", "motdepasse1");
   await papa.click("text=Créer mon compte");
   await papa.waitForURL(/famille/);
+  // Formulaires repliés de la page Famille
+  const createGroup = async (page, name) => {
+    await page.locator("#groupes summary", { hasText: "+ Créer un groupe" }).click();
+    await page.locator('#groupes input[name="name"]').fill(name);
+    await page.locator("#groupes form button[type=submit]").click();
+    await page.waitForURL(/groupes\//);
+  };
+  const addChild = async (page, name, coparent) => {
+    await page.locator("#enfants summary", { hasText: "+ Ajouter un enfant" }).click();
+    await page.locator('#enfants input[name="name"]').fill(name);
+    if (coparent) await page.selectOption('select[name="coparent"]', { label: coparent });
+    await page.locator("#enfants form button[type=submit]").click();
+    await page.waitForURL(/enfants\//);
+  };
+  const openInvite = async (page) => page.locator("#invitations summary", { hasText: "+ Inviter quelqu'un" }).click();
+
   // 2. Groupe + invitation
-  await papa.fill('input[name="name"][placeholder="Nom du groupe"]', "Toute la famille");
-  await papa.click("text=+ Créer");
-  await papa.waitForURL(/groupes/);
+  await createGroup(papa, "Toute la famille");
   await papa.goto(BASE + "/famille");
-  await papa.fill('input[name="name"][placeholder="Nom du groupe"]', "Côté papa");
-  await papa.click("text=+ Créer");
-  await papa.waitForURL(/groupes/);
+  await createGroup(papa, "Côté papa");
   await papa.goto(BASE + "/famille");
+  await openInvite(papa);
   for (const g of ["Toute la famille", "Côté papa"]) await papa.locator("label", { hasText: g }).locator('input[name="groups"]').check();
   await papa.click("text=Créer un lien d'invitation");
   await papa.waitForSelector('input[readonly]');
   const invite = await papa.inputValue('input[readonly]');
   ok(invite.includes("/invitation/"), "lien d'invitation créé");
   // 3. Enfant
-  await papa.fill('input[placeholder="Prénom de l\'enfant"]', "Léo");
-  await papa.click("text=+ Ajouter un enfant");
-  await papa.waitForURL(/enfants/);
+  await addChild(papa, "Léo");
   const leoId = papa.url().match(/enfants\/([0-9a-f-]{36})/)[1];
   await papa.fill("#login", "leo"); await papa.fill("#password", "secret1");
   await papa.locator('form:has(#login) button[type=submit]').click();
@@ -194,6 +205,7 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
 
   // 10 bis. Mamie, invitée APRÈS la création de Noël, voit tout de suite l'événement et les idées
   await papa.goto(BASE + "/famille");
+  await openInvite(papa);
   await papa.locator("label", { hasText: "Toute la famille" }).locator('input[name="groups"]').check();
   await papa.click("text=Créer un lien d'invitation");
   await papa.waitForURL(/ok=/);
@@ -214,9 +226,8 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
 
   // 10 quater. Deux parents : doublon supprimé, mère ajoutée, enfant créé avec ses deux parents
   await maman.goto(BASE + "/famille");
-  await maman.fill('input[placeholder="Prénom de l\'enfant"]', "Léo");
-  await maman.click("text=+ Ajouter un enfant");
-  await maman.waitForURL(/enfants/);
+  await addChild(maman, "Léo");
+  await maman.locator("summary", { hasText: "Plus d'options" }).click();
   await maman.locator("text=🗑 Supprimer Léo").click();
   await maman.locator("dialog[open] [data-confirm]").click();
   await maman.waitForURL(/famille\?ok=/);
@@ -228,10 +239,7 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await maman.goto(BASE + "/famille");
   ok(await maman.locator("#enfants li", { hasText: "Léo" }).count() === 1, "Julie est maintenant parent de Léo");
   await papa.goto(BASE + "/famille");
-  await papa.fill('input[placeholder="Prénom de l\'enfant"]', "Emma");
-  await papa.selectOption('select[name="coparent"]', { label: "Avec Julie" });
-  await papa.click("text=+ Ajouter un enfant");
-  await papa.waitForURL(/enfants/);
+  await addChild(papa, "Emma", "Avec Julie");
   await maman.goto(BASE + "/famille");
   ok(await maman.locator("#enfants li", { hasText: "Emma" }).count() === 1, "Emma créée avec ses deux parents");
   // Lien de connexion pour Emma : elle choisit son mot de passe et se retrouve connectée
@@ -256,6 +264,34 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await emma2.click("text=Se connecter");
   await emma2.waitForURL(BASE + "/");
   ok(true, "Emma se reconnecte avec son pseudo");
+
+  // 10 quinquies. Modération : Julie crée un événement ; papa (admin du groupe) le supprime puis le restaure
+  const dateAnniv = new Date(Date.now() + 45 * 864e5).toISOString().slice(0, 10);
+  await maman.goto(BASE + "/evenements/nouveau");
+  await maman.fill("#name", "Anniv Julie"); await maman.fill("#date", dateAnniv);
+  await maman.locator("label", { hasText: "Toute la famille" }).locator('input[name="groups"]').check();
+  await maman.click("text=Créer l'événement");
+  await maman.waitForURL(/evenements\/[0-9a-f-]{36}$/);
+  const annivUrl = maman.url();
+  ok(await maman.locator("text=Créé par Julie").count() === 1, "traçabilité : créé par Julie");
+  await papa.goto(BASE + "/");
+  ok(await papa.locator('nav[aria-label="Événements"] a').count() === 2, "sommaire des 2 événements sur l'accueil");
+  await shot(papa, "accueil-deux-evenements");
+  await papa.goto(annivUrl);
+  await papa.locator("text=⚙️ Modifier").click();
+  await papa.locator("button", { hasText: "Supprimer l'événement" }).click();
+  await papa.locator("dialog[open] [data-confirm]").click();
+  await papa.waitForURL(/corbeille/);
+  await leo.goto(BASE + "/");
+  ok(await leo.locator("h2", { hasText: "Anniv Julie" }).count() === 0, "événement supprimé : il disparaît pour les membres");
+  await papa.goto(BASE + "/famille");
+  await papa.locator("#groupes a", { hasText: "Toute la famille" }).click();
+  await papa.waitForURL(/groupes\//);
+  ok(await papa.locator("li", { hasText: "Anniv Julie" }).locator("text=supprimé le").count() === 1, "il est dans la corbeille du groupe");
+  await papa.locator("li", { hasText: "Anniv Julie" }).locator("text=↩️ Restaurer").click();
+  await papa.waitForURL(/ok=/);
+  await leo.goto(BASE + "/");
+  ok(await leo.locator("h2", { hasText: "Anniv Julie" }).count() === 1, "événement restauré pour tout le monde");
 
   // 11. Papa crée un lien « mot de passe » pour Julie, qui le change
   await papa.goto(BASE + "/famille#membres");

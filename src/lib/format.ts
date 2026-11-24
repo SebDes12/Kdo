@@ -91,3 +91,11 @@ export function eventCountdown(e: Period): string {
   const short = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" }).format(UTC(end));
   return `en cours jusqu'au ${short}`;
 }
+
+/** « 24 nov. » à partir d'un horodatage ISO. */
+export function formatDay(ts: string | null | undefined): string {
+  if (!ts) return "";
+  // Postgres renvoie « 2026-11-24 12:34:56.78+00 » : on le rend ISO
+  const iso = ts.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00");
+  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "Europe/Paris" }).format(new Date(iso));
+}

@@ -135,3 +135,23 @@ export function Notice({ tone, children }: { tone: "error" | "ok" | "info"; chil
   };
   return <div className={`mb-4 rounded-xl border px-4 py-3 text-sm font-semibold ${tones[tone]}`}>{children}</div>;
 }
+
+/** Bouton qui déplie un formulaire (sans JavaScript). */
+export function Reveal({
+  label,
+  children,
+  primary = false,
+  id,
+}: {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  primary?: boolean;
+  id?: string;
+}) {
+  return (
+    <details id={id} className="group">
+      <summary className={`${primary ? "btn-primary" : "btn-secondary"} cursor-pointer group-open:mb-3`}>{label}</summary>
+      {children}
+    </details>
+  );
+}

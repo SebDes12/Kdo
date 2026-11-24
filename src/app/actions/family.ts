@@ -146,7 +146,7 @@ export async function renameGroup(groupId: string, fd: FormData) {
   const rows = await attempt(back, () =>
     q("update groups set name = $2 where id = $1 returning id", [groupId, str(fd, "name")]),
   );
-  if (!rows.length) redirectError(back, "Seul le créateur peut renommer");
+  if (!rows.length) redirectError(back, "Seuls les administrateurs peuvent renommer le groupe");
   done(back, "Groupe renommé");
 }
 
@@ -154,8 +154,28 @@ export async function deleteGroup(groupId: string) {
   const { q } = await getSession();
   const back = `/famille/groupes/${groupId}`;
   const rows = await attempt(back, () => q("delete from groups where id = $1 returning id", [groupId]));
-  if (!rows.length) redirectError(back, "Seul le créateur peut supprimer le groupe");
+  if (!rows.length) redirectError(back, "Seuls les administrateurs peuvent supprimer le groupe");
   done("/famille", "Groupe supprimé");
+}
+
+/** Nomme ou retire un administrateur du groupe. */
+export async function setGroupAdmin(groupId: string, memberId: string, admin: boolean) {
+  const { q } = await getSession();
+  const back = `/famille/groupes/${groupId}`;
+  await attempt(back, () => q("select set_group_admin($1, $2, $3)", [groupId, memberId, admin]));
+  done(back, admin ? "Administrateur ajouté" : "Administrateur retiré");
+}
+
+/** Qui peut rattacher des événements au groupe : tous les membres ou les administrateurs. */
+export async function setEventCreation(groupId: string, fd: FormData) {
+  const { q } = await getSession();
+  const back = `/famille/groupes/${groupId}`;
+  const value = str(fd, "event_creation") === "admins" ? "admins" : "members";
+  const rows = await attempt(back, () =>
+    q("update groups set event_creation = $2 where id = $1 returning id", [groupId, value]),
+  );
+  if (!rows.length) redirectError(back, "Réservé aux administrateurs du groupe");
+  done(back, "Réglage enregistré");
 }
 
 export async function addGroupMember(groupId: string, fd: FormData) {

@@ -16,6 +16,11 @@ export type EventRow = {
   /** Fin de la période (égale au début pour un seul jour). */
   end_date: string;
   created_by: string | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
+  /** Dans la corbeille depuis… (restaurable 30 jours). */
+  deleted_at?: string | null;
+  deleted_by?: string | null;
   /** Groupes rattachés à l'événement. */
   event_groups?: { group_id: string }[];
 };
@@ -47,5 +52,5 @@ export type Contribution = {
   percent: number;
 };
 
-export type Group = { id: string; name: string; created_by: string | null };
-export type GroupMember = { group_id: string; member_id: string };
+export type Group = { id: string; name: string; created_by: string | null; event_creation?: "members" | "admins" };
+export type GroupMember = { group_id: string; member_id: string; is_admin?: boolean };

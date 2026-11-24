@@ -4,7 +4,7 @@ import type { Group, GroupMember } from "@/lib/types";
 
 export async function loadGroups(session: Session) {
   return session.tx(async (q) => ({
-    groups: await q<Group>("select id, name, created_by from groups order by name"),
-    groupMembers: await q<GroupMember>("select group_id, member_id from group_members"),
+    groups: await q<Group>("select id, name, created_by, event_creation from groups order by name"),
+    groupMembers: await q<GroupMember>("select group_id, member_id, is_admin from group_members"),
   }));
 }

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createChild, createGroup, createInvitation, createResetLink, deleteInvitation } from "@/app/actions/family";
 import { ConfirmButton, LinkButton, ShareLink, SubmitButton } from "@/components/client";
-import { Avatar, Badge, Empty, Notice, PageHeader, Section } from "@/components/ui";
+import { Avatar, Badge, Empty, Notice, PageHeader, Reveal, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
 import { loadGroups } from "./load";
 
@@ -42,13 +42,15 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
         </Notice>
       )}
 
-      <p className="mb-8 rounded-xl border-2 border-line bg-white px-4 py-3 text-sm text-ink">
-        💡 <strong>Comment ça marche :</strong> un événement est rattaché à un ou plusieurs groupes. Tous leurs membres le
-        voient et peuvent y ajouter leur liste d&apos;idées. Les idées sont visibles par les membres de ces groupes, jamais
-        par la personne qui les reçoit.
-      </p>
+      <details className="mb-8 text-sm text-muted">
+        <summary className="cursor-pointer font-bold hover:text-ink">💡 Comment ça marche ?</summary>
+        <p className="mt-2">
+          Un événement est rattaché à un ou plusieurs groupes. Tous leurs membres le voient et peuvent y ajouter leur liste
+          d&apos;idées, visible par les membres de ces groupes, jamais par la personne qui reçoit.
+        </p>
+      </details>
 
-      <Section title="Mes enfants" id="enfants" description="Tu choisis les groupes de chaque enfant. Ils ne voient jamais ce qui a été choisi pour eux.">
+      <Section title="Mes enfants" id="enfants">
         <div className="space-y-3">
           {children.length > 0 && (
             <ul className="card divide-y divide-line">
@@ -64,24 +66,26 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
               ))}
             </ul>
           )}
-          <form action={createChild} className="card grid gap-2 p-3 sm:grid-cols-[1fr_1fr_auto]">
-            <input name="name" className="field" placeholder="Prénom de l'enfant" required maxLength={60} aria-label="Prénom de l'enfant" />
-            <select name="coparent" className="field" aria-label="Autre parent (facultatif)" defaultValue="">
-              <option value="">Autre parent (facultatif)</option>
-              {members
-                .filter((m) => !m.is_child && m.id !== me.id)
-                .map((m) => <option key={m.id} value={m.id}>Avec {m.display_name}</option>)}
-            </select>
-            <SubmitButton className="btn-secondary">+ Ajouter un enfant</SubmitButton>
-          </form>
-          <p className="text-sm text-muted">
-            Ton enfant a déjà été ajouté par l&apos;autre parent ? Ne le recrée pas : demande-lui de t&apos;ajouter sur
-            la fiche de l&apos;enfant (section « Parents »).
-          </p>
+          <Reveal label="+ Ajouter un enfant">
+            <form action={createChild} className="card grid gap-2 p-3 sm:grid-cols-[1fr_1fr_auto]">
+              <input name="name" className="field" placeholder="Prénom de l'enfant" required maxLength={60} aria-label="Prénom de l'enfant" />
+              <select name="coparent" className="field" aria-label="Autre parent (facultatif)" defaultValue="">
+                <option value="">Autre parent (facultatif)</option>
+                {members
+                  .filter((m) => !m.is_child && m.id !== me.id)
+                  .map((m) => <option key={m.id} value={m.id}>Avec {m.display_name}</option>)}
+              </select>
+              <SubmitButton className="btn-primary">Ajouter</SubmitButton>
+            </form>
+            <p className="mt-2 text-xs text-muted">
+              Déjà ajouté par l&apos;autre parent ? Ne le recrée pas : demande-lui de t&apos;ajouter sur la fiche de
+              l&apos;enfant (section « Parents »).
+            </p>
+          </Reveal>
         </div>
       </Section>
 
-      <Section title="Groupes" id="groupes" description="Par exemple « Côté papa », « Côté maman », « Cousins ».">
+      <Section title="Groupes" id="groupes">
         <div className="space-y-3">
           {groups.length > 0 && (
             <ul className="card divide-y divide-line">
@@ -95,7 +99,11 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
                         <div className="font-bold">{g.name}</div>
                         <div className="truncate text-xs text-muted">{ms.map((x) => member(x.member_id)?.display_name).join(", ")}</div>
                       </div>
-                      {myGroups.includes(g) && <Badge tone="brand">membre</Badge>}
+                      {groupMembers.some((x) => x.group_id === g.id && x.member_id === me.id && x.is_admin) ? (
+                        <Badge tone="violet">admin</Badge>
+                      ) : (
+                        myGroups.includes(g) && <Badge tone="brand">membre</Badge>
+                      )}
                       <span className="text-muted">›</span>
                     </Link>
                   </li>
@@ -103,14 +111,17 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
               })}
             </ul>
           )}
-          <form action={createGroup} className="flex gap-2">
-            <input name="name" className="field" placeholder="Nom du groupe" required maxLength={60} aria-label="Nom du groupe" />
-            <SubmitButton className="btn-secondary shrink-0">+ Créer</SubmitButton>
-          </form>
+          <Reveal label="+ Créer un groupe">
+            <form action={createGroup} className="flex gap-2">
+              <input name="name" className="field" placeholder="Ex. : Côté papa, Cousins…" required maxLength={60} aria-label="Nom du groupe" />
+              <SubmitButton className="btn-primary shrink-0">Créer</SubmitButton>
+            </form>
+          </Reveal>
         </div>
       </Section>
 
-      <Section title="Inviter quelqu'un" id="invitations" description="Chaque lien sert une seule fois et expire après 14 jours.">
+      <Section title="Invitations" id="invitations">
+        <Reveal label="+ Inviter quelqu'un" primary>
         <form action={createInvitation} className="card mb-4 space-y-3 p-4">
           {myGroups.length > 0 && (
             <fieldset>
@@ -130,9 +141,11 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
             </fieldset>
           )}
           <SubmitButton className="btn-primary w-full sm:w-auto">Créer un lien d&apos;invitation</SubmitButton>
+          <p className="hint">Le lien sert une seule fois et expire après 14 jours.</p>
         </form>
+        </Reveal>
         {pending.length > 0 && (
-          <ul className="space-y-3">
+          <ul className="mt-3 space-y-3">
             {pending.map((i) => (
               <li key={i.token} className="card space-y-2 p-3">
                 <div className="flex items-center justify-between text-xs text-muted">
@@ -170,7 +183,7 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
       <Section
         title="Toute la famille"
         id="membres"
-        description="Quelqu'un a oublié son mot de passe ? Crée-lui un lien avec « Mot de passe »."
+        description="Mot de passe oublié ? « 🔑 Mot de passe » crée un lien à lui envoyer."
       >
         {members.length === 0 ? (
           <Empty>Personne pour l&apos;instant.</Empty>

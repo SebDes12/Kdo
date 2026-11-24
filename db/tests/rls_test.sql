@@ -321,6 +321,76 @@ select tests.ok((select count(*) from public.contributions where idea_id = :I_PE
 update public.events set event_date = current_date + 30, end_date = current_date + 30 where id = :E_NOEL;
 set role kdo_user;
 
+-- ---------------------------------------------------------------------
+-- Modération : administrateurs, réglage de création, corbeille
+-- ---------------------------------------------------------------------
+reset role;
+select tests.ok((select is_admin from public.group_members where group_id = :G_FAM and member_id = :M_PAPA), 'le créateur du groupe en est administrateur');
+set role kdo_user;
+
+-- Mamie (simple membre) crée un événement pour le groupe et y met une idée ; maman la choisit
+select tests.login(:MAMIE);
+insert into public.events (name, event_date, created_by) values ('Fête de mamie', current_date + 20, :M_MAMIE) returning id as fete \gset
+\set E_FETE '''':fete''''
+insert into public.event_groups (event_id, group_id) values (:E_FETE, :G_FAM);
+insert into public.ideas (beneficiary_id, event_id, title, created_by) values (:M_MAMIE, :E_FETE, 'Orchidée', :M_MAMIE) returning id as i_orchidee \gset
+select tests.login(:MAMAN);
+insert into public.contributions (idea_id, event_id, member_id, percent) values (:'i_orchidee', :E_FETE, :M_MAMAN, 100);
+
+-- Maman (membre, pas admin, pas créatrice) ne peut ni modifier ni supprimer l'événement
+select tests.ok(tests.affected(format('update public.events set name = ''x'' where id = %L', :E_FETE)) = 0, 'un simple membre ne modifie pas l''événement d''un autre');
+select tests.refused(format('select public.delete_event(%L)', :E_FETE), 'un simple membre ne supprime pas l''événement d''un autre');
+select tests.ok(tests.affected(format('update public.groups set name = ''x'' where id = %L', :G_FAM)) = 0, 'un simple membre ne renomme pas le groupe');
+select tests.refused(format('select public.set_group_admin(%L, %L, true)', :G_FAM, :M_MAMAN), 'se nommer administrateur soi-même');
+select tests.refused(format('insert into public.group_members (group_id, member_id, is_admin) values (%L, %L, true)', :G_FAM, :M_ONCLE),
+  'un simple membre ajoute un administrateur');
+
+-- Papa (admin du groupe) renomme puis supprime l'événement de mamie
+select tests.login(:PAPA);
+select tests.ok(tests.affected(format('update public.events set name = ''Fête de Mamie'' where id = %L', :E_FETE)) = 1, 'un admin du groupe modifie l''événement');
+select tests.ok((select updated_by from public.events where id = :E_FETE) = :M_PAPA, 'on sait qui a modifié l''événement');
+select public.delete_event(:E_FETE);
+select tests.ok((select deleted_by from public.events where id = :E_FETE) = :M_PAPA, 'papa voit l''événement dans la corbeille');
+select tests.login(:LEO_U);
+select tests.ok((select count(*) from public.events where id = :E_FETE) = 0, 'un membre ne voit plus l''événement supprimé');
+select tests.login(:MAMAN);
+select tests.ok((select count(*) from public.events where id = :E_FETE) = 1, 'maman, qui y avait choisi un cadeau, le voit encore');
+select tests.refused(format('select public.restore_event(%L)', :E_FETE), 'un simple membre ne restaure pas');
+select tests.login(:MAMIE);
+select tests.refused(format('insert into public.ideas (beneficiary_id, event_id, title, created_by) values (%L, %L, ''x'', %L)', :M_MAMIE, :E_FETE, :M_MAMIE),
+  'pas de nouvelle idée sur un événement supprimé');
+select public.restore_event(:E_FETE);
+select tests.login(:LEO_U);
+select tests.ok((select count(*) from public.events where id = :E_FETE) = 1, 'événement restauré : visible à nouveau');
+select tests.ok((select count(*) from public.contributions where event_id = :E_FETE) = 1, 'les choix sont restaurés aussi');
+
+-- Réglage : seuls les admins créent des événements pour le groupe
+select tests.login(:PAPA);
+update public.groups set event_creation = 'admins' where id = :G_FAM;
+select tests.login(:MAMIE);
+insert into public.events (name, event_date, created_by) values ('Spam', current_date + 3, :M_MAMIE) returning id as spam \gset
+select tests.refused(format('insert into public.event_groups (event_id, group_id) values (%L, %L)', :'spam', :G_FAM),
+  'groupe réservé aux admins : un membre n''y rattache pas d''événement');
+select tests.login(:PAPA);
+update public.groups set event_creation = 'members' where id = :G_FAM;
+
+-- Nommer / retirer des administrateurs, jamais le dernier
+select public.set_group_admin(:G_FAM, :M_MAMAN, true);
+select tests.refused(format('select public.set_group_admin(%L, %L, true)', :G_FAM, :M_LEO), 'un enfant administrateur');
+select public.set_group_admin(:G_FAM, :M_PAPA, false);
+select tests.login(:MAMAN);
+select tests.refused(format('select public.set_group_admin(%L, %L, false)', :G_FAM, :M_MAMAN), 'retirer le dernier administrateur');
+select public.set_group_admin(:G_FAM, :M_PAPA, true);
+
+-- Corbeille vidée après 30 jours
+select public.delete_event(:E_FETE);
+reset role;
+select tests.ok(public.purge_deleted_events() = 0, 'pas d''effacement avant 30 jours');
+update public.events set deleted_at = now() - interval '31 days' where id = :E_FETE;
+select tests.ok(public.purge_deleted_events() = 1, 'effacement définitif après 30 jours');
+select tests.ok((select event_id from public.ideas where id = :'i_orchidee') is null, 'l''idée repasse en réserve');
+set role kdo_user;
+
 -- Lien d'activation pour un enfant
 select tests.login(:PAPA);
 select tests.ok(length(public.create_child_login_link(:M_LEO)) = 64, 'papa crée un lien de connexion pour Léo');

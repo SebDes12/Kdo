@@ -10,7 +10,7 @@ export function EventForm({
 }: {
   action: (fd: FormData) => Promise<void>;
   /** Groupes dont je suis membre. */
-  groups: (Group & { count: number })[];
+  groups: (Group & { count: number; can_create: boolean })[];
   initial?: { name: string; date: string; end: string; groups: string[] };
   submitLabel: string;
 }) {
@@ -49,16 +49,21 @@ export function EventForm({
             {groups.map((g) => (
               <label
                 key={g.id}
-                className="flex cursor-pointer items-center gap-2 rounded-full border-2 border-line bg-white px-3 py-1.5 text-sm font-bold has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700"
+                title={g.can_create ? undefined : "Seuls les administrateurs de ce groupe peuvent y créer des événements"}
+                className={`flex items-center gap-2 rounded-full border-2 border-line bg-white px-3 py-1.5 text-sm font-bold has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700 ${
+                  g.can_create ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                }`}
               >
                 <input
                   type="checkbox"
                   name="groups"
                   value={g.id}
-                  defaultChecked={initial ? initial.groups.includes(g.id) : groups.length === 1}
+                  disabled={!g.can_create && !initial?.groups.includes(g.id)}
+                  defaultChecked={initial ? initial.groups.includes(g.id) : groups.filter((x) => x.can_create).length === 1 && g.can_create}
                   className="size-4 accent-brand-600"
                 />
                 👥 {g.name} <span className="font-semibold text-muted">· {g.count}</span>
+                {!g.can_create && <span className="text-xs font-semibold text-muted">(admins)</span>}
               </label>
             ))}
           </div>
