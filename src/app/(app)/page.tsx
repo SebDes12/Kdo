@@ -1,19 +1,41 @@
 import Link from "next/link";
+import { IdeaCard } from "@/components/idea-card";
 import { Avatar, Empty } from "@/components/ui";
 import { formatCountdown, formatDate, isActive } from "@/lib/format";
-import { CONTRIBUTIONS_SQL, EVENTS_SQL, RESERVE_COUNTS_SQL, ideaStatus } from "@/lib/ideas";
+import {
+  CONTRIBUTIONS_SQL,
+  EVENTS_SQL,
+  IDEAS_SQL,
+  RESERVE_COUNTS_SQL,
+  ideaStatus,
+  sortForGiver,
+} from "@/lib/ideas";
 import { getSession } from "@/lib/session";
-import type { Contribution, EventRow } from "@/lib/types";
+import type { Contribution, EventRow, Idea } from "@/lib/types";
 
+/**
+ * Accueil = « offrir un cadeau » : toutes les idées des événements à venir,
+ * directement avec le bouton « Je le prends ».
+ */
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
-  const { tx, me, member, children } = await getSession();
+  const { tx, me, member, children, isParentOf } = await getSession();
 
-  const { events, ideas, contributions, reserve, chosen } = await tx(async (q) => ({
+  const { events, ideas, contributions, reserve, chosen, viewable } = await tx(async (q) => ({
+    viewable: new Set(
+      (
+        await q<{ member_id: string }>(
+          `select distinct b.member_id from event_beneficiaries b join events e on e.id = b.event_id
+           where e.event_date >= current_date and can_view_list(b.member_id)`,
+        )
+      ).map((r) => r.member_id),
+    ),
     events: await q<EventRow>(`${EVENTS_SQL} order by e.event_date`),
-    ideas: await q<{ id: string; event_id: string }>(
-      `select i.id, i.event_id from ideas i join events e on e.id = i.event_id
-       where e.event_date >= current_date and i.beneficiary_id <> $1`,
+    // Idées des autres sur les événements à venir (la base ne renvoie que les listes partagées avec moi)
+    ideas: await q<Idea>(
+      `${IDEAS_SQL}
+       where i.beneficiary_id <> $1
+         and i.event_id in (select id from events where event_date >= current_date)`,
       [me.id],
     ),
     contributions: await q<Contribution>(
@@ -33,46 +55,28 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   }));
   const upcoming = events.filter((e) => isActive(e.event_date));
   const past = events.filter((e) => !isActive(e.event_date)).reverse();
-  const freeIdeas = (eventId: string) =>
-    ideas.filter((i) => i.event_id === eventId && ideaStatus(i.id, eventId, contributions, me.id).total < 100).length;
+  const status = (i: Idea) => ideaStatus(i.id, i.event_id, contributions, me.id);
+  const isTaken = (i: Idea) => status(i).total >= 100 && status(i).mine === 0;
 
   return (
     <>
-      <h1 className="mb-5 text-2xl font-extrabold tracking-tight">
-        {sp.bienvenue ? `Bienvenue ${me.display_name} 🎉` : `Bonjour ${me.display_name} 👋`}
-      </h1>
-
-      <div className="mb-8 grid grid-cols-2 gap-3">
-        <Tile
-          href={`/listes/${me.id}`}
-          icon="📝"
-          title={children.length ? "Nos listes" : "Ma liste"}
-          text={
-            reserve > 0
-              ? `📦 ${reserve} idée${reserve > 1 ? "s" : ""} en réserve`
-              : children.length
-                ? `Moi, ${children.map((c) => c.display_name).join(", ")}`
-                : "Mes idées de cadeaux"
-          }
-        />
-        <Tile
-          href="/mes-cadeaux"
-          icon="🎁"
-          title="Mes cadeaux"
-          text={chosen ? `${chosen} choisi${chosen > 1 ? "s" : ""}` : "Ce que j'offre"}
-        />
-      </div>
-
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <h2 className="text-lg font-extrabold">Offrir un cadeau</h2>
-        {!me.is_child && (
-          <Link href="/evenements/nouveau" className="text-sm font-bold text-brand-600 hover:underline">
-            + Nouvel événement
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-extrabold tracking-tight">
+          {sp.bienvenue ? `Bienvenue ${me.display_name} 🎉` : `Bonjour ${me.display_name} 👋`}
+        </h1>
+        <div className="flex gap-2">
+          <Link href={`/listes/${me.id}`} className="btn-secondary py-2 text-xs">
+            📝 {children.length ? "Nos listes" : "Ma liste"}
+            {reserve > 0 && <span className="rounded-full bg-amber-100 px-1.5 text-amber-800">📦 {reserve}</span>}
           </Link>
-        )}
+          <Link href="/mes-cadeaux" className="btn-secondary py-2 text-xs">
+            🎁 Mes cadeaux
+            {chosen > 0 && <span className="rounded-full bg-emerald-100 px-1.5 text-emerald-800">{chosen}</span>}
+          </Link>
+        </div>
       </div>
 
-      {upcoming.length === 0 ? (
+      {upcoming.length === 0 && (
         <Empty icon="📅">
           Aucun événement à venir.
           {!me.is_child && (
@@ -81,67 +85,116 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             </div>
           )}
         </Empty>
-      ) : (
-        <ul className="space-y-3">
-          {upcoming.map((e) => {
-            const people = (e.event_beneficiaries ?? []).map((b) => member(b.member_id)).filter(Boolean);
-            const free = freeIdeas(e.id);
-            const onlyMe = people.length === 1 && people[0]!.id === me.id;
-            return (
-              <li key={e.id}>
-                <Link
-                  href={`/evenements/${e.id}`}
-                  className="card flex items-center gap-4 p-4 transition hover:border-brand-200 hover:shadow-md"
-                >
-                  <div className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-                    <span className="text-lg font-extrabold leading-none">{e.event_date.slice(8, 10)}</span>
-                    <span className="text-[10px] font-bold uppercase">
-                      {new Intl.DateTimeFormat("fr-FR", { month: "short", timeZone: "UTC" }).format(new Date(e.event_date))}
-                    </span>
+      )}
+
+      {upcoming.map((e) => {
+        const eventIdeas = ideas.filter((i) => i.event_id === e.id);
+        // Les personnes de l'événement (sauf moi) dont je vois la liste
+        const people = (e.event_beneficiaries ?? [])
+          .map((b) => member(b.member_id))
+          .filter((m): m is NonNullable<typeof m> => !!m && m.id !== me.id && viewable.has(m.id))
+          .sort((a, b) => a.display_name.localeCompare(b.display_name));
+        const taken = sortForGiver(eventIdeas.filter(isTaken), contributions, me.id);
+        const back = (pid: string) => `/#e${e.id.slice(0, 8)}-${pid.slice(0, 8)}`;
+
+        return (
+          <section key={e.id} className="mb-10">
+            <div className="sticky top-14 z-20 -mx-4 mb-4 flex items-baseline justify-between gap-3 border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur">
+              <h2 className="truncate text-lg font-extrabold">
+                {e.name} <span className="text-sm font-bold text-brand-600">· {formatCountdown(e.event_date)}</span>
+              </h2>
+              <Link href={`/evenements/${e.id}`} className="shrink-0 text-xs font-bold text-muted hover:text-ink">
+                Détails ›
+              </Link>
+            </div>
+
+            {people.length === 0 && (
+              <p className="text-sm text-muted">Aucune liste à consulter pour cet événement.</p>
+            )}
+
+            {people.map((p) => {
+              const list = sortForGiver(
+                eventIdeas.filter((i) => i.beneficiary_id === p.id && !isTaken(i)),
+                contributions,
+                me.id,
+              );
+              const hasList = eventIdeas.some((i) => i.beneficiary_id === p.id);
+              const suggestHref = `/idees/nouvelle?pour=${p.id}&evenement=${e.id}&back=${encodeURIComponent(back(p.id))}`;
+              return (
+                <div key={p.id} id={back(p.id).slice(2)} className="mb-6 scroll-mt-28">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Avatar member={p} size="sm" />
+                    <h3 className="flex-1 font-extrabold">Pour {p.display_name}</h3>
+                    <Link href={suggestHref} className="text-xs font-bold text-muted hover:text-brand-600">
+                      {isParentOf(p.id) ? "+ Ajouter" : "+ Suggérer"}
+                    </Link>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-extrabold">{e.name}</h3>
-                    <p className="text-sm text-muted">
-                      {formatCountdown(e.event_date)}
-                      {!onlyMe && ` · ${free} idée${free > 1 ? "s" : ""} à choisir`}
+                  {list.length > 0 ? (
+                    <div className="space-y-3">
+                      {list.map((idea) => (
+                        <IdeaCard
+                          key={idea.id}
+                          idea={idea}
+                          mode="giver"
+                          status={status(idea)}
+                          open
+                          canEdit={idea.is_secret && idea.created_by === me.id && !isParentOf(p.id)}
+                          back={back(p.id)}
+                          member={member}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-line px-4 py-3 text-sm text-muted">
+                      {hasList ? "🎉 Tout est déjà choisi." : "Pas encore d'idée."}
                     </p>
-                  </div>
-                  <div className="hidden -space-x-2 sm:flex">
-                    {people.slice(0, 5).map((p) => <Avatar key={p!.id} member={p} size="sm" />)}
-                  </div>
-                  <span className="text-xl text-muted">›</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  )}
+                </div>
+              );
+            })}
 
-      {past.length > 0 && (
-        <details className="mt-8">
-          <summary className="cursor-pointer text-sm font-bold text-muted hover:text-ink">Événements passés ({past.length}) ▾</summary>
-          <ul className="mt-2">
-            {past.map((e) => (
-              <li key={e.id}>
-                <Link href={`/evenements/${e.id}`} className="flex justify-between rounded-xl px-3 py-2 text-sm hover:bg-white">
-                  <span className="font-bold">{e.name}</span>
-                  <span className="text-muted">{formatDate(e.event_date)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+            {taken.length > 0 && (
+              <details>
+                <summary className="cursor-pointer text-sm font-bold text-muted hover:text-ink">
+                  Déjà choisies par d&apos;autres ({taken.length}) ▾
+                </summary>
+                <ul className="mt-2 space-y-1 text-sm text-muted">
+                  {taken.map((i) => (
+                    <li key={i.id} className="flex items-center gap-2">
+                      <Avatar member={member(i.beneficiary_id)} size="sm" />
+                      <span className="line-through">{i.title}</span>
+                      <span className="text-xs">
+                        ({status(i).others.map((c) => member(c.member_id)?.display_name).join(", ")})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </section>
+        );
+      })}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-sm">
+        {!me.is_child && (
+          <Link href="/evenements/nouveau" className="font-bold text-brand-600 hover:underline">+ Nouvel événement</Link>
+        )}
+        {past.length > 0 && (
+          <details>
+            <summary className="cursor-pointer font-bold text-muted hover:text-ink">Événements passés ({past.length}) ▾</summary>
+            <ul className="mt-2">
+              {past.map((e) => (
+                <li key={e.id}>
+                  <Link href={`/evenements/${e.id}`} className="flex justify-between gap-4 rounded-xl px-3 py-1.5 hover:bg-white">
+                    <span className="font-bold">{e.name}</span>
+                    <span className="text-muted">{formatDate(e.event_date)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
     </>
-  );
-}
-
-function Tile({ href, icon, title, text }: { href: string; icon: string; title: string; text: string }) {
-  return (
-    <Link href={href} className="card flex flex-col gap-0.5 p-4 transition hover:border-brand-200 hover:shadow-md">
-      <span className="mb-1 text-2xl">{icon}</span>
-      <span className="font-extrabold">{title}</span>
-      <span className="truncate text-xs text-muted">{text}</span>
-    </Link>
   );
 }

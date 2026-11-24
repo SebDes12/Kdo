@@ -112,10 +112,13 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await addIdea(papa, "Casque audio");
   await shot(papa, "ma-liste");
 
-  // 7. Maman prend la perceuse, participe au casque et suggère un livre secret
-  await maman.goto(eventUrl); await tab(maman, "Seb");
+  // 7. Maman prend la perceuse directement depuis l'accueil, participe au casque et suggère un livre secret
+  await maman.goto(BASE + "/");
   await maman.locator("article", { hasText: "Perceuse" }).locator("text=Je le prends").click();
   await maman.waitForLoadState("networkidle");
+  ok(await maman.locator("article", { hasText: "Perceuse" }).locator("text=Tu offres ce cadeau").count() === 1, "cadeau pris depuis l'accueil");
+  await shot(maman, "accueil-apres-choix");
+  await maman.goto(eventUrl); await tab(maman, "Seb");
   await maman.locator("article", { hasText: "Casque" }).locator("summary").click();
   await maman.locator("article", { hasText: "Casque" }).locator("input[type=number]").fill("40");
   await maman.locator("article", { hasText: "Casque" }).locator("text=OK").click();
