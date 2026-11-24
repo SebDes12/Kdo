@@ -8,8 +8,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { me } = await getSession();
   const items = [
     { href: "/", label: "Accueil", icon: "🏠" },
+    { href: "/j-offre", label: "J'offre", icon: "🛍️" },
     { href: `/listes/${me.id}`, label: "Ma liste", icon: "📝" },
-    { href: "/mes-cadeaux", label: "Mes cadeaux", icon: "🎁" },
     ...(me.is_child ? [] : [{ href: "/famille", label: "Famille", icon: "👨‍👩‍👧" }]),
   ];
 

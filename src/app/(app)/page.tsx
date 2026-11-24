@@ -6,7 +6,6 @@ import {
   CONTRIBUTIONS_SQL,
   EVENTS_SQL,
   IDEAS_SQL,
-  RESERVE_COUNTS_SQL,
   ideaStatus,
   sortForGiver,
 } from "@/lib/ideas";
@@ -19,9 +18,9 @@ import type { Contribution, EventRow, Idea } from "@/lib/types";
  */
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
-  const { tx, me, member, children, isParentOf } = await getSession();
+  const { tx, me, member, isParentOf } = await getSession();
 
-  const { events, ideas, contributions, reserve, chosen, myEvents, myCounts } = await tx(async (q) => ({
+  const { events, ideas, contributions, myEvents, myCounts } = await tx(async (q) => ({
     // Événements à venir dont je fais partie, et le nombre d'idées que j'y ai mises
     myEvents: new Set(
       (
@@ -51,17 +50,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     contributions: await q<Contribution>(
       `${CONTRIBUTIONS_SQL} where event_id in (select id from events where event_date >= current_date)`,
     ),
-    reserve: (await q<{ n: number }>(RESERVE_COUNTS_SQL, [[me.id, ...children.map((c) => c.id)]])).reduce(
-      (s, r) => s + r.n,
-      0,
-    ),
-    chosen: (
-      await q<{ n: number }>(
-        `select count(*)::int as n from contributions c join events e on e.id = c.event_id
-         where c.member_id = $1 and e.event_date >= current_date`,
-        [me.id],
-      )
-    )[0].n,
   }));
   const upcoming = events.filter((e) => isActive(e.event_date));
   const past = events.filter((e) => !isActive(e.event_date)).reverse();
@@ -70,20 +58,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-5">
         <h1 className="text-2xl font-extrabold tracking-tight">
           {sp.bienvenue ? `Bienvenue ${me.display_name} 🎉` : `Bonjour ${me.display_name} 👋`}
         </h1>
-        <div className="flex gap-2">
-          <Link href={`/listes/${me.id}`} className="btn-secondary py-2 text-xs">
-            📝 {children.length ? "Nos listes" : "Ma liste"}
-            {reserve > 0 && <span className="rounded-full bg-amber-100 px-1.5 text-amber-800">📦 {reserve}</span>}
-          </Link>
-          <Link href="/mes-cadeaux" className="btn-secondary py-2 text-xs">
-            🎁 Mes cadeaux
-            {chosen > 0 && <span className="rounded-full bg-emerald-100 px-1.5 text-emerald-800">{chosen}</span>}
-          </Link>
-        </div>
       </div>
 
       {upcoming.length === 0 && (
