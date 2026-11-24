@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { restoreEvent } from "@/app/actions/events";
+import { SubmitButton } from "@/components/client";
 import { IdeaCard } from "@/components/idea-card";
 import { Avatar, Empty } from "@/components/ui";
-import { eventCountdown, formatPeriod, isOpen, isUuid } from "@/lib/format";
+import { eventCountdown, formatDay, formatPeriod, isOpen, isUuid } from "@/lib/format";
 import {
   CONTRIBUTIONS_SQL,
   EVENTS_SQL,
@@ -27,8 +29,10 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
   const data = await tx(async (q) => {
     const [event] = await q<EventRow>(`${EVENTS_SQL} where e.id = $1`, [id]);
     if (!event) return null;
+    const [{ manage }] = await q<{ manage: boolean }>("select can_manage_event($1) as manage", [id]);
     return {
       event,
+      canManageEvent: manage,
       ideas: await q<Idea>(`${IDEAS_SQL} where i.event_id = $1 and i.deleted_at is null`, [id]),
       contributions: await q<Contribution>(`${CONTRIBUTIONS_SQL} where event_id = $1`, [id]),
       // Membres des groupes de l'événement
@@ -47,8 +51,8 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
     };
   });
   if (!data) notFound();
-  const { event, ideas, contributions, eventMembers, reserve } = data;
-  const open = isOpen(event);
+  const { event, ideas, contributions, eventMembers, reserve, canManageEvent } = data;
+  const open = isOpen(event) && !event.deleted_at;
   const status = (i: Idea) => ideaStatus(i.id, id, contributions, me.id);
 
   // Onglets : les personnes qui ont une liste ici, mes enfants membres, et moi en dernier.
@@ -99,19 +103,37 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
       <header className="mb-5">
         <Link href="/" className="mb-2 inline-flex text-sm font-semibold text-muted hover:text-ink">← Accueil</Link>
         <div className="band flex items-start justify-between gap-3 rounded-2xl p-5 shadow-sm">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">🎁 {event.name}</h1>
             <p className="text-sm text-band-ink/85">
               {formatPeriod(event)} · <span className="font-bold text-accent">{eventCountdown(event)}</span>
             </p>
+            <p className="mt-2 text-xs text-band-ink/60">
+              Créé par {member(event.created_by)?.display_name ?? "?"}
+              {event.updated_by && ` · modifié par ${member(event.updated_by)?.display_name ?? "?"} le ${formatDay(event.updated_at)}`}
+            </p>
           </div>
-          {event.created_by === me.id && (
+          {canManageEvent && !event.deleted_at && (
             <Link href={`/evenements/${id}/modifier`} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-band-ink/85 hover:bg-white/10">
               ⚙️ Modifier
             </Link>
           )}
         </div>
       </header>
+
+      {event.deleted_at && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-900">
+          <span>
+            🗑 Dans la corbeille depuis le {formatDay(event.deleted_at)} (supprimé par{" "}
+            {member(event.deleted_by)?.display_name ?? "?"}). Effacé définitivement après 30 jours.
+          </span>
+          {canManageEvent && (
+            <form action={restoreEvent.bind(null, id)}>
+              <SubmitButton className="btn-primary py-1.5 text-xs">↩️ Restaurer</SubmitButton>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* Une personne à la fois */}
       <nav className="sticky top-14 z-20 -mx-4 mb-5 flex gap-2 overflow-x-auto border-b-2 border-line bg-paper px-4 py-2.5" aria-label="Pour qui ?">
@@ -145,11 +167,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
         )}
       </div>
 
-      {isMe && (
-        <p className="mb-4 rounded-xl bg-stone-100 px-3 py-2 text-sm text-stone-600">
-          🤫 Surprise : tu ne vois pas ce que les autres ont choisi pour toi.
-        </p>
-      )}
+      {isMe && <p className="-mt-2 mb-4 text-sm text-muted">🤫 Tu ne vois pas ce que les autres ont choisi pour toi.</p>}
 
       {nReserve > 0 && (
         <Link

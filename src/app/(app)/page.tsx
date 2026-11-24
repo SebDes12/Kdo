@@ -22,14 +22,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   const { events, ideas, contributions, myEvents, myCounts, warnings } = await tx(async (q) => ({
     // Effacement des idées supprimées dont l'événement est fini depuis plus de 2 jours
-    purged: await q("select purge_deleted_ideas()"),
+    purged: await q("select purge_deleted_ideas(), purge_deleted_events()"),
     // Cadeaux que j'ai choisis puis que la personne a retirés de sa liste ou de l'événement
     warnings: (
       await q<{ n: number }>(
         `select count(*)::int as n from contributions c
          join ideas i on i.id = c.idea_id join events e on e.id = c.event_id
          where c.member_id = $1 and e.end_date >= current_date
-           and (i.deleted_at is not null or i.event_id is distinct from c.event_id)`,
+           and (i.deleted_at is not null or i.event_id is distinct from c.event_id or e.deleted_at is not null)`,
         [me.id],
       )
     )[0].n,
@@ -51,16 +51,16 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         )
       ).map((r) => [r.event_id, r.n]),
     ),
-    events: await q<EventRow>(`${EVENTS_SQL} order by e.event_date`),
+    events: await q<EventRow>(`${EVENTS_SQL} where e.deleted_at is null order by e.event_date`),
     // Idées des autres sur les événements à venir (la base ne renvoie que celles des événements de mes groupes)
     ideas: await q<Idea>(
       `${IDEAS_SQL}
        where i.beneficiary_id <> $1 and i.deleted_at is null
-         and i.event_id in (select id from events where end_date >= current_date)`,
+         and i.event_id in (select id from events where end_date >= current_date and deleted_at is null)`,
       [me.id],
     ),
     contributions: await q<Contribution>(
-      `${CONTRIBUTIONS_SQL} where event_id in (select id from events where end_date >= current_date)`,
+      `${CONTRIBUTIONS_SQL} where event_id in (select id from events where end_date >= current_date and deleted_at is null)`,
     ),
   }));
   const upcoming = events.filter((e) => isOpen(e));
@@ -100,7 +100,22 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </Empty>
       )}
 
-      {upcoming.map((e) => {
+      {upcoming.length >= 2 && (
+        <nav className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Événements">
+          {upcoming.map((e, n) => (
+            <a
+              key={e.id}
+              href={`#evt-${e.id}`}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold shadow-sm ${ZONES[n % ZONES.length].chip}`}
+            >
+              🎁 {e.name} <span className="font-semibold opacity-80">· {eventCountdown(e)}</span>
+            </a>
+          ))}
+        </nav>
+      )}
+
+      {upcoming.map((e, n) => {
+        const zone = ZONES[n % ZONES.length];
         const eventIdeas = ideas.filter((i) => i.event_id === e.id);
         // Les personnes (sauf moi) qui ont mis une liste sur cet événement
         const people = [...new Set(eventIdeas.map((i) => i.beneficiary_id))]
@@ -113,18 +128,18 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         const back = (pid: string) => `/#e${e.id.slice(0, 8)}-${pid.slice(0, 8)}`;
 
         return (
-          <section key={e.id} className="mb-10">
-            <div className="band sticky top-14 z-20 -mx-4 mb-5 flex items-center justify-between gap-3 px-4 py-3 shadow-sm sm:mx-0 sm:rounded-2xl">
+          <section key={e.id} id={`evt-${e.id}`} className={`-mx-2 mb-12 scroll-mt-20 rounded-3xl p-2 ring-1 sm:mx-0 sm:p-3 ${zone.zone}`}>
+            <div className={`mb-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3 shadow-sm ${zone.band}`}>
               <h2 className="min-w-0 truncate text-lg font-extrabold">
-                🎁 {e.name} <span className="text-sm font-bold text-accent">· {eventCountdown(e)}</span>
+                🎁 {e.name} <span className={`text-sm font-bold ${zone.accent}`}>· {eventCountdown(e)}</span>
               </h2>
-              <Link href={`/evenements/${e.id}`} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-band-ink/85 hover:bg-white/10">
+              <Link href={`/evenements/${e.id}`} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold opacity-85 hover:bg-white/10">
                 Détails ›
               </Link>
             </div>
 
             {myEvents.has(e.id) && (
-              <div className="mb-5 flex items-stretch overflow-hidden rounded-xl border-2 border-dashed border-line text-sm">
+              <div className="mb-4 flex items-stretch overflow-hidden rounded-xl border-2 border-dashed border-line bg-white/70 text-sm">
                 <Link
                   href={`/evenements/${e.id}?pour=${me.id}`}
                   className="flex flex-1 items-center gap-1 px-3 py-2 hover:bg-brand-50"
@@ -142,7 +157,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             )}
 
             {people.length === 0 && (
-              <p className="text-sm text-muted">Personne n&apos;a encore ajouté de liste à cet événement.</p>
+              <p className="px-2 pb-2 text-sm text-muted">Personne n&apos;a encore ajouté de liste à cet événement.</p>
             )}
 
             {people.map((p) => {
@@ -157,7 +172,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 <div
                   key={p.id}
                   id={back(p.id).slice(2)}
-                  className="mb-8 scroll-mt-28 overflow-hidden rounded-2xl border-2 border-line bg-white shadow-md"
+                  className="mb-4 scroll-mt-20 overflow-hidden rounded-2xl border-2 border-line bg-white shadow-md"
                 >
                   <div className="flex items-center gap-2 border-b-2 border-brand-100 bg-brand-50 px-3 py-2.5">
                     <Avatar member={p} />
@@ -197,7 +212,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             })}
 
             {taken.length > 0 && (
-              <details>
+              <details className="px-2 pb-1">
                 <summary className="cursor-pointer text-sm font-bold text-muted hover:text-ink">
                   Déjà choisies par d&apos;autres ({taken.length}) ▾
                 </summary>
@@ -241,3 +256,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     </>
   );
 }
+
+/** Teintes alternées des zones d'événement sur l'accueil. */
+const ZONES = [
+  { zone: "bg-band/[0.06] ring-band/15", band: "band", accent: "text-accent", chip: "band" },
+  { zone: "bg-amber-100/70 ring-amber-300/60", band: "bg-amber-800 text-white", accent: "text-amber-200", chip: "bg-amber-800 text-white" },
+  { zone: "bg-brand-50 ring-brand-200", band: "bg-brand-700 text-white", accent: "text-brand-100", chip: "bg-brand-700 text-white" },
+];

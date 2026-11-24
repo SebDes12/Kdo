@@ -32,7 +32,11 @@
 | Une idée appartient à **un seul événement actif** à la fois. | ✅ |
 | Une fois la date passée, l'événement est **archivé**. Les idées non offertes peuvent être **rattachées à un nouvel événement**. | ✅ |
 | Quand une idée partiellement financée est reportée, elle **repart à 0 %** (les participations restent dans l'historique de l'ancien événement). | ✅ |
-| Qui crée un événement : tout adulte. | ✅ |
+| Un événement a une **période** (début → fin) ; on peut y choisir des cadeaux jusqu'à la date de fin. | ✅ |
+| Qui crée un événement : tout adulte membre du groupe, ou seulement les **administrateurs** si le groupe l'a réglé ainsi. | ✅ |
+| Qui modifie ou supprime un événement : son créateur et les **administrateurs** de ses groupes (créateur du groupe + ceux qu'il nomme). | ✅ |
+| Un événement supprimé va dans la **corbeille** : restaurable 30 jours (avec les choix déjà faits), puis effacé ; ceux qui y avaient choisi un cadeau sont prévenus. | ✅ |
+| Chaque événement indique **qui l'a créé et qui l'a modifié**. | ✅ |
 
 ## 4. Idées cadeaux
 

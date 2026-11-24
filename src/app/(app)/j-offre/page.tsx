@@ -20,7 +20,7 @@ type Row = {
     deleted_at: string | null;
     idea_links: { url: string; position: number }[];
   } | null;
-  event: { id: string; name: string; event_date: string; end_date: string } | null;
+  event: { id: string; name: string; event_date: string; end_date: string; deleted_at: string | null; deleted_by: string | null } | null;
 };
 
 export default async function MyGiftsPage() {
@@ -30,7 +30,8 @@ export default async function MyGiftsPage() {
             json_build_object('id', i.id, 'title', i.title, 'beneficiary_id', i.beneficiary_id,
               'price_cents', i.price_cents, 'event_id', i.event_id, 'deleted_at', i.deleted_at,
               'idea_links', i.idea_links) as idea,
-            json_build_object('id', e.id, 'name', e.name, 'event_date', e.event_date, 'end_date', e.end_date) as event
+            json_build_object('id', e.id, 'name', e.name, 'event_date', e.event_date, 'end_date', e.end_date,
+              'deleted_at', e.deleted_at, 'deleted_by', e.deleted_by) as event
      from contributions c
      join (${IDEAS_SQL}) i on i.id = c.idea_id
      join events e on e.id = c.event_id
@@ -61,7 +62,9 @@ export default async function MyGiftsPage() {
             const who = member(r.idea!.beneficiary_id);
             const link = [...r.idea!.idea_links].sort((a, b) => a.position - b.position)[0];
             // L'idée a été supprimée, ou retirée de l'événement pour lequel je l'avais choisie
-            const warning = r.idea!.deleted_at
+            const warning = g.event.deleted_at
+              ? `${member(g.event.deleted_by)?.display_name ?? "Quelqu'un"} a supprimé l'événement « ${g.event.name} ».`
+              : r.idea!.deleted_at
               ? `${who?.display_name ?? "La personne"} l'a retirée de sa liste.`
               : r.idea!.event_id !== g.event.id
                 ? `${who?.display_name ?? "La personne"} l'a retirée de « ${g.event.name} ».`

@@ -11,7 +11,7 @@ export const IDEAS_SQL = `
 
 /** Événements avec leurs groupes (à compléter par un WHERE sur l'alias e). */
 export const EVENTS_SQL = `
-  select e.id, e.name, e.event_date, e.end_date, e.created_by,
+  select e.id, e.name, e.event_date, e.end_date, e.created_by, e.updated_at, e.updated_by, e.deleted_at, e.deleted_by,
          coalesce((select json_agg(json_build_object('group_id', eg.group_id))
                    from event_groups eg where eg.event_id = e.id), '[]') as event_groups
   from events e`;
@@ -25,7 +25,8 @@ export const memberInEvent = (param: string) => `exists (
 export const RESERVE_COUNTS_SQL = `
   select i.beneficiary_id, count(*)::int as n
   from ideas i left join events e on e.id = i.event_id
-  where i.beneficiary_id = any($1::uuid[]) and (i.event_id is null or e.end_date < current_date)
+  where i.beneficiary_id = any($1::uuid[]) and i.deleted_at is null
+    and (i.event_id is null or e.end_date < current_date or e.deleted_at is not null)
   group by i.beneficiary_id`;
 
 export const CONTRIBUTIONS_SQL = "select idea_id, event_id, member_id, percent from contributions";
