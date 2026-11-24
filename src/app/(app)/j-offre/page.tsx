@@ -92,7 +92,14 @@ export default async function MyGiftsPage() {
                         <input type="hidden" name="idea" value={r.idea!.id} />
                         <input type="hidden" name="event" value={g.event.id} />
                         <input type="hidden" name="back" value="/j-offre" />
-                        <ConfirmButton message="Annuler ton choix ?" className="btn-secondary py-1 text-xs">
+                        <ConfirmButton
+                          title="Annuler ton choix ?"
+                          message="Pense à annuler aussi l'achat si tu l'avais déjà fait."
+                          confirmLabel="Oui, annuler"
+                icon="↩️"
+                          cancelLabel="Garder"
+                          className="btn-secondary py-1 text-xs"
+                        >
                           Annuler mon choix
                         </ConfirmButton>
                       </form>

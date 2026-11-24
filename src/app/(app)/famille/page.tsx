@@ -145,7 +145,14 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
                     expire le {new Date(i.expires_at).toLocaleDateString("fr-FR")}
                   </span>
                   <form action={deleteInvitation.bind(null, i.token)}>
-                    <ConfirmButton message="Supprimer ce lien ?" className="btn-ghost py-1 text-xs">Supprimer</ConfirmButton>
+                    <ConfirmButton
+                      title="Supprimer ce lien d'invitation ?"
+                      message="Il ne pourra plus être utilisé."
+                      confirmLabel="Supprimer"
+                      className="btn-ghost py-1 text-xs"
+                    >
+                      Supprimer
+                    </ConfirmButton>
                   </form>
                 </div>
                 <ShareLink url={`${origin}/invitation/${i.token}`} />
