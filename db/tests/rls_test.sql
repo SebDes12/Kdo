@@ -321,6 +321,18 @@ select tests.ok((select count(*) from public.contributions where idea_id = :I_PE
 update public.events set event_date = current_date + 30, end_date = current_date + 30 where id = :E_NOEL;
 set role kdo_user;
 
+-- Suppression d'un enfant en double
+select tests.login(:MAMAN);
+select public.create_child('Léo (doublon)') as doublon \gset
+select tests.login(:MAMIE);
+select tests.refused(format('select public.delete_child(%L)', :'doublon'), 'supprimer l''enfant de quelqu''un d''autre');
+select tests.refused(format('select public.delete_child(%L)', :M_PAPA), 'supprimer un adulte');
+select tests.login(:MAMAN);
+select tests.refused(format('select public.delete_child(%L)', :M_PAPA), 'un parent supprime un adulte');
+select public.delete_child(:'doublon');
+select tests.ok((select count(*) from public.members where id = :'doublon') = 0, 'maman supprime le doublon');
+select tests.ok((select count(*) from public.members where id = :M_LEO) = 1, 'le vrai Léo est intact');
+
 -- ---------------------------------------------------------------------
 -- Émancipation
 -- ---------------------------------------------------------------------

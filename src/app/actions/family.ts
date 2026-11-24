@@ -30,6 +30,8 @@ export async function createChild(fd: FormData) {
   const [row] = await attempt("/famille", () =>
     tx(async (q) => {
       const rows = await q<{ id: string }>("select create_child($1) as id", [name]);
+      const coparent = str(fd, "coparent");
+      if (coparent) await q("select add_coparent($1, $2)", [rows[0].id, coparent]);
       await q(
         `insert into group_members (group_id, member_id)
          select group_id, $1 from group_members where member_id = $2 on conflict do nothing`,
@@ -40,6 +42,13 @@ export async function createChild(fd: FormData) {
   );
   revalidatePath("/", "layout");
   redirect(`/famille/enfants/${row.id}?ok=${encodeURIComponent("Enfant ajouté")}`);
+}
+
+/** Supprime le profil d'un enfant (doublon…) : ses idées et ses choix disparaissent aussi. */
+export async function deleteChild(childId: string) {
+  const { q } = await getSession();
+  await attempt(`/famille/enfants/${childId}`, () => q("select delete_child($1)", [childId]));
+  done("/famille", "Enfant supprimé");
 }
 
 /** Crée ou met à jour l'identifiant de connexion d'un enfant (pseudo + mot de passe). */

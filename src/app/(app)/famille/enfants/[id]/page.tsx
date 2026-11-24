@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { addCoparent, emancipate, removeCoparent, renameMember, setChildLogin } from "@/app/actions/family";
+import { addCoparent, deleteChild, emancipate, removeCoparent, renameMember, setChildLogin } from "@/app/actions/family";
 import { ConfirmButton, SubmitButton } from "@/components/client";
 import { Avatar, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
@@ -101,6 +101,17 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
         ) : (
           <p className="text-sm text-muted">Crée d&apos;abord un identifiant de connexion.</p>
         )}
+      </Section>
+
+      <Section
+        title={`Supprimer ${child.display_name}`}
+        description="Par exemple s'il a été ajouté deux fois. Ses idées, ses choix et son identifiant disparaissent aussi."
+      >
+        <form action={deleteChild.bind(null, id)}>
+          <ConfirmButton message={`Supprimer définitivement ${child.display_name} et toutes ses idées ?`}>
+            🗑 Supprimer {child.display_name}
+          </ConfirmButton>
+        </form>
       </Section>
     </>
   );
