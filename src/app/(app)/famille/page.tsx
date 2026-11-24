@@ -64,10 +64,20 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
               ))}
             </ul>
           )}
-          <form action={createChild} className="flex gap-2">
+          <form action={createChild} className="card grid gap-2 p-3 sm:grid-cols-[1fr_1fr_auto]">
             <input name="name" className="field" placeholder="Prénom de l'enfant" required maxLength={60} aria-label="Prénom de l'enfant" />
-            <SubmitButton className="btn-secondary shrink-0">+ Ajouter un enfant</SubmitButton>
+            <select name="coparent" className="field" aria-label="Autre parent (facultatif)" defaultValue="">
+              <option value="">Autre parent (facultatif)</option>
+              {members
+                .filter((m) => !m.is_child && m.id !== me.id)
+                .map((m) => <option key={m.id} value={m.id}>Avec {m.display_name}</option>)}
+            </select>
+            <SubmitButton className="btn-secondary">+ Ajouter un enfant</SubmitButton>
           </form>
+          <p className="text-sm text-muted">
+            Ton enfant a déjà été ajouté par l&apos;autre parent ? Ne le recrée pas : demande-lui de t&apos;ajouter sur
+            la fiche de l&apos;enfant (section « Parents »).
+          </p>
         </div>
       </Section>
 

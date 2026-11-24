@@ -212,6 +212,29 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await mamie.goto(BASE + "/");
   await shot(mamie, "accueil-mamie");
 
+  // 10 quater. Deux parents : doublon supprimé, mère ajoutée, enfant créé avec ses deux parents
+  await maman.goto(BASE + "/famille");
+  await maman.fill('input[placeholder="Prénom de l\'enfant"]', "Léo");
+  await maman.click("text=+ Ajouter un enfant");
+  await maman.waitForURL(/enfants/);
+  maman.once("dialog", (d) => d.accept());
+  await maman.locator("text=🗑 Supprimer Léo").click();
+  await maman.waitForURL(/famille\?ok=/);
+  ok(await maman.locator("#enfants li").count() === 0, "Julie a supprimé le doublon de Léo");
+  await papa.goto(BASE + "/famille/enfants/" + leoId);
+  await papa.locator('select[name="parent"]').selectOption({ label: "Julie" });
+  await papa.locator('form:has(select[name="parent"]) button').click();
+  await papa.waitForURL(/ok=/);
+  await maman.goto(BASE + "/famille");
+  ok(await maman.locator("#enfants li", { hasText: "Léo" }).count() === 1, "Julie est maintenant parent de Léo");
+  await papa.goto(BASE + "/famille");
+  await papa.fill('input[placeholder="Prénom de l\'enfant"]', "Emma");
+  await papa.selectOption('select[name="coparent"]', { label: "Avec Julie" });
+  await papa.click("text=+ Ajouter un enfant");
+  await papa.waitForURL(/enfants/);
+  await maman.goto(BASE + "/famille");
+  ok(await maman.locator("#enfants li", { hasText: "Emma" }).count() === 1, "Emma créée avec ses deux parents");
+
   // 11. Papa crée un lien « mot de passe » pour Julie, qui le change
   await papa.goto(BASE + "/famille#membres");
   papa.once("dialog", (d) => d.accept());
