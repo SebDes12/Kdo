@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { IdeaCard } from "@/components/idea-card";
 import { Avatar, Empty } from "@/components/ui";
-import { formatCountdown, formatDate, isActive, isUuid } from "@/lib/format";
+import { eventCountdown, formatPeriod, isOpen, isUuid } from "@/lib/format";
 import {
   CONTRIBUTIONS_SQL,
   EVENTS_SQL,
@@ -29,7 +29,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
     if (!event) return null;
     return {
       event,
-      ideas: await q<Idea>(`${IDEAS_SQL} where i.event_id = $1`, [id]),
+      ideas: await q<Idea>(`${IDEAS_SQL} where i.event_id = $1 and i.deleted_at is null`, [id]),
       contributions: await q<Contribution>(`${CONTRIBUTIONS_SQL} where event_id = $1`, [id]),
       // Membres des groupes de l'événement
       eventMembers: new Set(
@@ -48,7 +48,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
   });
   if (!data) notFound();
   const { event, ideas, contributions, eventMembers, reserve } = data;
-  const open = isActive(event.event_date);
+  const open = isOpen(event);
   const status = (i: Idea) => ideaStatus(i.id, id, contributions, me.id);
 
   // Onglets : les personnes qui ont une liste ici, mes enfants membres, et moi en dernier.
@@ -102,7 +102,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">🎁 {event.name}</h1>
             <p className="text-sm text-band-ink/85">
-              {formatDate(event.event_date)} · <span className="font-bold text-accent">{formatCountdown(event.event_date)}</span>
+              {formatPeriod(event)} · <span className="font-bold text-accent">{eventCountdown(event)}</span>
             </p>
           </div>
           {event.created_by === me.id && (

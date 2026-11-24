@@ -238,8 +238,10 @@ insert into public.ideas (beneficiary_id, title, created_by) values (:M_LEO, 'En
 \set I_RESERVE '''':i_reserve''''
 select tests.ok(tests.affected(format('update public.ideas set event_id = %L where id = %L', :E_NOEL, :I_RESERVE)) = 1,
   'rattacher une idée en réserve');
-select tests.refused(format('update public.ideas set event_id = null where id = %L', :I_RESERVE),
-  'détacher une idée d''un événement en cours');
+select tests.ok(tests.affected(format('update public.ideas set event_id = null where id = %L', :I_RESERVE)) = 1,
+  'retirer une idée d''un événement en cours');
+select tests.ok(tests.affected(format('update public.ideas set event_id = %L where id = %L', :E_NOEL, :I_RESERVE)) = 1,
+  'la remettre dans l''événement');
 
 -- Idée rattachée à l'événement passé (création directe pour le test)
 reset role;
@@ -256,6 +258,68 @@ select tests.refused(format('insert into public.contributions (idea_id, event_id
 select tests.login(:PAPA);
 select tests.ok(tests.affected(format('update public.ideas set event_id = %L where id = %L', :E_NOEL,
   '20000000-0000-0000-0000-000000000001')) = 1, 'reporter une idée d''un événement passé');
+
+-- ---------------------------------------------------------------------
+-- Période, déplacement, retrait et suppression logique
+-- ---------------------------------------------------------------------
+select tests.login(:PAPA);
+select tests.refused(format('insert into public.events (name, event_date, end_date, created_by) values (''x'', current_date, current_date - 1, %L)', :M_PAPA),
+  'période qui finit avant de commencer');
+-- Un événement commencé hier et qui dure jusqu'à demain est encore ouvert
+insert into public.events (name, event_date, end_date, created_by)
+  values ('Anniv Léo (en plusieurs fois)', current_date - 1, current_date + 1, :M_PAPA) returning id as anniv \gset
+\set E_ANNIV '''':anniv''''
+insert into public.event_groups (event_id, group_id) values (:E_ANNIV, :G_FAM);
+
+-- Le Lego de Léo (pris à 100 % par mamie) est déplacé vers l'anniversaire : la réservation suit
+select tests.ok(tests.affected(format('update public.ideas set event_id = %L where id = %L', :E_ANNIV, :I_LEGO)) = 1,
+  'déplacer une idée choisie vers un autre événement en cours');
+select tests.login(:MAMIE);
+select tests.ok((select event_id from public.contributions where idea_id = :I_LEGO) = :E_ANNIV, 'la réservation suit l''idée déplacée');
+select tests.refused(format('insert into public.contributions (idea_id, event_id, member_id, percent) values (%L, %L, %L, 10)', :I_LEGO, :E_ANNIV, :M_MAMAN),
+  'l''idée déplacée reste prise à 100 %');
+
+-- Papa la retire de l'événement (mise en réserve) : mamie la voit toujours, avec sa réservation
+select tests.login(:PAPA);
+select tests.ok(tests.affected(format('update public.ideas set event_id = null where id = %L', :I_LEGO)) = 1,
+  'retirer une idée choisie d''un événement en cours');
+select tests.login(:MAMIE);
+select tests.ok((select count(*) from public.ideas where id = :I_LEGO and event_id is null) = 1, 'mamie voit toujours l''idée retirée');
+select tests.ok((select count(*) from public.contributions where idea_id = :I_LEGO) = 1, 'mamie garde sa réservation');
+select tests.login(:MAMAN);
+select tests.ok((select count(*) from public.contributions where idea_id = :I_LEGO) = 1, 'maman (parent) voit encore la réservation de mamie');
+
+-- Suppression : papa supprime sa perceuse (prise par maman et mamie)
+select tests.login(:PAPA);
+select public.delete_idea(:I_PERCEUSE);
+select tests.ok((select count(*) from public.ideas where id = :I_PERCEUSE) = 0, 'papa ne voit plus la perceuse supprimée');
+select tests.refused(format('select public.delete_idea(%L)', :I_PERCEUSE), 'supprimer deux fois');
+select tests.refused(format('delete from public.ideas where id = %L', :I_RESERVE), 'DELETE direct interdit');
+select tests.login(:MAMAN);
+select tests.ok((select count(*) from public.ideas where id = :I_PERCEUSE and deleted_at is not null) = 1, 'maman (qui l''a choisie) voit la perceuse supprimée');
+select tests.ok(tests.affected(format('update public.ideas set title = ''x'' where id = %L', :I_PERCEUSE)) = 0, 'une idée supprimée ne se modifie plus');
+select tests.login(:LEO_U);
+select tests.ok((select count(*) from public.ideas where id = :I_PERCEUSE) = 0, 'Léo (membre, pas acheteur) ne voit plus la perceuse');
+
+-- Une idée en réserve jamais choisie est effacée tout de suite ; une idée d'événement est seulement masquée
+select tests.login(:PAPA);
+insert into public.ideas (beneficiary_id, title, created_by) values (:M_PAPA, 'Brouillon', :M_PAPA) returning id as i_brouillon \gset
+select public.delete_idea(:'i_brouillon');
+insert into public.ideas (beneficiary_id, event_id, title, created_by) values (:M_PAPA, :E_NOEL, 'Jamais choisie', :M_PAPA) returning id as i_jamais \gset
+select public.delete_idea(:'i_jamais');
+reset role;
+select tests.ok((select count(*) from public.ideas where id = :'i_brouillon') = 0, 'idée en réserve jamais choisie : effacée physiquement');
+select tests.ok((select count(*) from public.ideas where id = :'i_jamais' and deleted_at is not null) = 1, 'idée d''événement : suppression logique');
+
+-- Purge : rien avant J+2 après la fin, tout après
+select tests.ok(public.purge_deleted_ideas() = 0, 'pas de purge avant la fin de l''événement');
+update public.events set event_date = current_date - 10, end_date = current_date - 2 where id = :E_NOEL;
+select tests.ok(public.purge_deleted_ideas() = 0, 'pas de purge à J+2');
+update public.events set end_date = current_date - 3 where id = :E_NOEL;
+select tests.ok(public.purge_deleted_ideas() = 2, 'purge à J+3 : perceuse et idée jamais choisie effacées');
+select tests.ok((select count(*) from public.contributions where idea_id = :I_PERCEUSE) = 0, 'les réservations de l''idée purgée disparaissent');
+update public.events set event_date = current_date + 30, end_date = current_date + 30 where id = :E_NOEL;
+set role kdo_user;
 
 -- ---------------------------------------------------------------------
 -- Émancipation

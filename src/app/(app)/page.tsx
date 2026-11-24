@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { IdeaCard } from "@/components/idea-card";
 import { Avatar, Empty } from "@/components/ui";
-import { formatCountdown, formatDate, isActive } from "@/lib/format";
+import { eventCountdown, formatPeriod, isOpen } from "@/lib/format";
 import {
   CONTRIBUTIONS_SQL,
   EVENTS_SQL,
@@ -20,7 +20,19 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const { tx, me, member, isParentOf } = await getSession();
 
-  const { events, ideas, contributions, myEvents, myCounts } = await tx(async (q) => ({
+  const { events, ideas, contributions, myEvents, myCounts, warnings } = await tx(async (q) => ({
+    // Effacement des idées supprimées dont l'événement est fini depuis plus de 2 jours
+    purged: await q("select purge_deleted_ideas()"),
+    // Cadeaux que j'ai choisis puis que la personne a retirés de sa liste ou de l'événement
+    warnings: (
+      await q<{ n: number }>(
+        `select count(*)::int as n from contributions c
+         join ideas i on i.id = c.idea_id join events e on e.id = c.event_id
+         where c.member_id = $1 and e.end_date >= current_date
+           and (i.deleted_at is not null or i.event_id is distinct from c.event_id)`,
+        [me.id],
+      )
+    )[0].n,
     // Événements à venir dont je fais partie, et le nombre d'idées que j'y ai mises
     myEvents: new Set(
       (
@@ -43,16 +55,16 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     // Idées des autres sur les événements à venir (la base ne renvoie que celles des événements de mes groupes)
     ideas: await q<Idea>(
       `${IDEAS_SQL}
-       where i.beneficiary_id <> $1
-         and i.event_id in (select id from events where event_date >= current_date)`,
+       where i.beneficiary_id <> $1 and i.deleted_at is null
+         and i.event_id in (select id from events where end_date >= current_date)`,
       [me.id],
     ),
     contributions: await q<Contribution>(
-      `${CONTRIBUTIONS_SQL} where event_id in (select id from events where event_date >= current_date)`,
+      `${CONTRIBUTIONS_SQL} where event_id in (select id from events where end_date >= current_date)`,
     ),
   }));
-  const upcoming = events.filter((e) => isActive(e.event_date));
-  const past = events.filter((e) => !isActive(e.event_date)).reverse();
+  const upcoming = events.filter((e) => isOpen(e));
+  const past = events.filter((e) => !isOpen(e)).reverse();
   const status = (i: Idea) => ideaStatus(i.id, i.event_id, contributions, me.id);
   const isTaken = (i: Idea) => status(i).total >= 100 && status(i).mine === 0;
 
@@ -63,6 +75,19 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           {sp.bienvenue ? `Bienvenue ${me.display_name} 🎉` : `Bonjour ${me.display_name} 👋`}
         </h1>
       </div>
+
+      {warnings > 0 && (
+        <Link
+          href="/j-offre"
+          className="mb-5 flex items-center justify-between gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 hover:bg-amber-100"
+        >
+          <span>
+            ⚠️ {warnings} cadeau{warnings > 1 ? "x" : ""} que tu as choisi{warnings > 1 ? "s" : ""} {warnings > 1 ? "ont" : "a"} été
+            retiré{warnings > 1 ? "s" : ""} d&apos;une liste
+          </span>
+          <span>Voir ›</span>
+        </Link>
+      )}
 
       {upcoming.length === 0 && (
         <Empty icon="📅">
@@ -91,7 +116,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <section key={e.id} className="mb-10">
             <div className="band sticky top-14 z-20 -mx-4 mb-5 flex items-center justify-between gap-3 px-4 py-3 shadow-sm sm:mx-0 sm:rounded-2xl">
               <h2 className="min-w-0 truncate text-lg font-extrabold">
-                🎁 {e.name} <span className="text-sm font-bold text-accent">· {formatCountdown(e.event_date)}</span>
+                🎁 {e.name} <span className="text-sm font-bold text-accent">· {eventCountdown(e)}</span>
               </h2>
               <Link href={`/evenements/${e.id}`} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-band-ink/85 hover:bg-white/10">
                 Détails ›
@@ -186,7 +211,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 <li key={e.id}>
                   <Link href={`/evenements/${e.id}`} className="flex justify-between gap-4 rounded-xl px-3 py-1.5 hover:bg-white">
                     <span className="font-bold">{e.name}</span>
-                    <span className="text-muted">{formatDate(e.event_date)}</span>
+                    <span className="text-muted">{formatPeriod(e)}</span>
                   </Link>
                 </li>
               ))}

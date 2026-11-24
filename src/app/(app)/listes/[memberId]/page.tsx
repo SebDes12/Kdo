@@ -5,7 +5,7 @@ import { moveIdea } from "@/app/actions/ideas";
 import { IdeaCard } from "@/components/idea-card";
 import { SubmitButton } from "@/components/client";
 import { Avatar, Empty } from "@/components/ui";
-import { formatCountdown, isActive } from "@/lib/format";
+import { eventCountdown, isOpen } from "@/lib/format";
 import { CONTRIBUTIONS_SQL, EVENTS_SQL, IDEAS_SQL, ideaStatus, memberInEvent, sortForOwner } from "@/lib/ideas";
 import { getSession } from "@/lib/session";
 import type { Contribution, EventRow, Idea } from "@/lib/types";
@@ -21,7 +21,7 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
   const back = `/listes/${memberId}`;
 
   const { ideas, events, contributions } = await tx(async (q) => ({
-    ideas: await q<Idea>(`${IDEAS_SQL} where i.beneficiary_id = $1`, [memberId]),
+    ideas: await q<Idea>(`${IDEAS_SQL} where i.beneficiary_id = $1 and i.deleted_at is null`, [memberId]),
     events: await q<EventRow>(
       `${EVENTS_SQL}
        where ${memberInEvent("$1")}
@@ -34,7 +34,7 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
       [memberId],
     ),
   }));
-  const upcoming = events.filter((e) => isActive(e.event_date));
+  const upcoming = events.filter((e) => isOpen(e));
   const eventById = new Map(events.map((e) => [e.id, e]));
 
   // En réserve : sans événement, ou rattachées à un événement passé.
@@ -101,7 +101,7 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
           <section key={e.id} className="mb-8">
             <h2 className="section-title mb-3 flex items-baseline gap-2">
               <Link href={`/evenements/${e.id}`} className="hover:text-brand-600">{e.name}</Link>
-              <span className="text-sm font-bold text-brand-600">{formatCountdown(e.event_date)}</span>
+              <span className="text-sm font-bold text-brand-600">{eventCountdown(e)}</span>
             </h2>
             {list.length === 0 ? (
               <p className="rounded-xl border border-dashed border-line px-4 py-3 text-sm text-muted">

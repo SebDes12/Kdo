@@ -7,7 +7,7 @@ import type { EventRow } from "@/lib/types";
 export async function upcomingEventsFor(session: Session, memberId: string): Promise<EventRow[]> {
   return session.q<EventRow>(
     `${EVENTS_SQL}
-     where e.event_date >= current_date and ${memberInEvent("$1")}
+     where e.end_date >= current_date and ${memberInEvent("$1")}
      order by e.event_date`,
     [memberId],
   );

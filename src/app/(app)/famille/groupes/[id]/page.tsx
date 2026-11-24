@@ -6,7 +6,7 @@ import { Avatar, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
 import { loadGroups } from "../../load";
 import { EVENTS_SQL } from "@/lib/ideas";
-import { formatDate, isActive } from "@/lib/format";
+import { formatPeriod, isOpen } from "@/lib/format";
 import Link from "next/link";
 import type { EventRow } from "@/lib/types";
 
@@ -87,8 +87,8 @@ export default async function GroupPage({ params }: PageProps<"/famille/groupes/
             {events.map((e) => (
               <li key={e.id}>
                 <Link href={`/evenements/${e.id}`} className="flex justify-between gap-3 px-4 py-2.5 text-sm hover:bg-brand-50">
-                  <span className={`font-bold ${isActive(e.event_date) ? "" : "text-muted"}`}>{e.name}</span>
-                  <span className="text-muted">{formatDate(e.event_date)}</span>
+                  <span className={`font-bold ${isOpen(e) ? "" : "text-muted"}`}>{e.name}</span>
+                  <span className="text-muted">{formatPeriod(e)}</span>
                 </Link>
               </li>
             ))}
