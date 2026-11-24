@@ -8,12 +8,14 @@ import { EVENTS_SQL } from "@/lib/ideas";
 import type { EventRow } from "@/lib/types";
 import { isUuid } from "@/lib/format";
 import { EventForm } from "../../event-form";
+import { myGroups } from "../../load";
 
 export const metadata: Metadata = { title: "Modifier l'événement" };
 
 export default async function EditEventPage({ params }: PageProps<"/evenements/[id]/modifier">) {
   const { id } = await params;
-  const { q, me, members } = await getSession();
+  const session = await getSession();
+  const { q, me } = session;
   const [ev] = isUuid(id) ? await q<EventRow>(`${EVENTS_SQL} where e.id = $1`, [id]) : [];
   if (!ev || ev.created_by !== me.id) notFound();
 
@@ -22,8 +24,8 @@ export default async function EditEventPage({ params }: PageProps<"/evenements/[
       <PageHeader back={{ href: `/evenements/${id}`, label: ev.name }} title="Modifier l'événement" />
       <EventForm
         action={updateEvent.bind(null, id)}
-        members={members}
-        initial={{ name: ev.name, date: ev.event_date, beneficiaries: (ev.event_beneficiaries ?? []).map((b) => b.member_id) }}
+        groups={await myGroups(session)}
+        initial={{ name: ev.name, date: ev.event_date, groups: (ev.event_groups ?? []).map((g) => g.group_id) }}
         submitLabel="Enregistrer"
       />
       <form action={deleteEvent.bind(null, id)} className="mt-8 border-t border-line pt-6">

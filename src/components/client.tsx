@@ -87,7 +87,14 @@ export function Flash() {
   );
 }
 
-export function NavLinks({ items }: { items: { href: string; label: string; icon: string }[] }) {
+export function NavLinks({
+  items,
+  onBand = false,
+}: {
+  items: { href: string; label: string; icon: string }[];
+  /** Liens posés sur le bandeau de couleur (en-tête ordinateur). */
+  onBand?: boolean;
+}) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" || pathname.startsWith("/evenements") : pathname.startsWith(href));
   return (
@@ -97,7 +104,13 @@ export function NavLinks({ items }: { items: { href: string; label: string; icon
           key={it.href}
           href={it.href}
           className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[11px] font-bold transition sm:flex-none sm:flex-row sm:gap-2 sm:px-3 sm:text-sm ${
-            isActive(it.href) ? "text-brand-600 sm:bg-brand-50" : "text-muted hover:text-ink"
+            onBand
+              ? isActive(it.href)
+                ? "bg-white/15 text-band-ink"
+                : "text-band-ink/80 hover:bg-white/10 hover:text-band-ink"
+              : isActive(it.href)
+                ? "text-brand-600"
+                : "text-muted hover:text-ink"
           }`}
         >
           <span className="text-xl sm:text-base" aria-hidden>

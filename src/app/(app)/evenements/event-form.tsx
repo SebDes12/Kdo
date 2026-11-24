@@ -1,16 +1,17 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/client";
-import { Avatar } from "@/components/ui";
-import type { Member } from "@/lib/types";
+import type { Group } from "@/lib/types";
 
 export function EventForm({
   action,
-  members,
+  groups,
   initial,
   submitLabel,
 }: {
   action: (fd: FormData) => Promise<void>;
-  members: Member[];
-  initial?: { name: string; date: string; beneficiaries: string[] };
+  /** Groupes dont je suis membre. */
+  groups: (Group & { count: number })[];
+  initial?: { name: string; date: string; groups: string[] };
   submitLabel: string;
 }) {
   return (
@@ -24,18 +25,35 @@ export function EventForm({
         <input id="date" name="date" type="date" className="field" defaultValue={initial?.date} required />
       </div>
       <fieldset>
-        <legend className="label">Qui reçoit des cadeaux ?</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {members.map((m) => (
-            <label key={m.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-3 py-2 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
-              <input type="checkbox" name="beneficiaries" value={m.id} defaultChecked={initial?.beneficiaries.includes(m.id)} className="size-4 accent-brand-600" />
-              <Avatar member={m} size="sm" />
-              <span className="font-bold">{m.display_name}</span>
-              {m.is_child && <span className="text-xs text-muted">enfant</span>}
-            </label>
-          ))}
-        </div>
-        <p className="hint">Pour Noël, coche tout le monde ; pour un anniversaire, une seule personne.</p>
+        <legend className="label">Pour quel(s) groupe(s) ?</legend>
+        {groups.length === 0 ? (
+          <p className="text-sm text-muted">
+            Tu ne fais partie d&apos;aucun groupe.{" "}
+            <Link href="/famille#groupes" className="font-bold text-brand-600">Crée d&apos;abord un groupe</Link>.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {groups.map((g) => (
+              <label
+                key={g.id}
+                className="flex cursor-pointer items-center gap-2 rounded-full border-2 border-line bg-white px-3 py-1.5 text-sm font-bold has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700"
+              >
+                <input
+                  type="checkbox"
+                  name="groups"
+                  value={g.id}
+                  defaultChecked={initial ? initial.groups.includes(g.id) : groups.length === 1}
+                  className="size-4 accent-brand-600"
+                />
+                👥 {g.name} <span className="font-semibold text-muted">· {g.count}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        <p className="hint">
+          Tous les membres de ces groupes voient l&apos;événement. Chacun peut y ajouter sa liste d&apos;idées (pour un
+          anniversaire, seule la personne fêtée le fera).
+        </p>
       </fieldset>
       <SubmitButton className="btn-primary w-full sm:w-auto">{submitLabel}</SubmitButton>
     </form>

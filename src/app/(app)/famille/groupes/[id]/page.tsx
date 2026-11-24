@@ -4,7 +4,11 @@ import { addGroupMember, deleteGroup, removeGroupMember, renameGroup } from "@/a
 import { ConfirmButton, SubmitButton } from "@/components/client";
 import { Avatar, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
-import { loadSharing } from "../../load";
+import { loadGroups } from "../../load";
+import { EVENTS_SQL } from "@/lib/ideas";
+import { formatDate, isActive } from "@/lib/format";
+import Link from "next/link";
+import type { EventRow } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Groupe" };
 
@@ -12,7 +16,12 @@ export default async function GroupPage({ params }: PageProps<"/famille/groupes/
   const { id } = await params;
   const session = await getSession();
   const { me, members, member } = session;
-  const { groups, groupMembers, shares } = await loadSharing(session);
+  const { groups, groupMembers } = await loadGroups(session);
+  const events = await session.q<EventRow>(
+    `${EVENTS_SQL} where exists (select 1 from event_groups eg where eg.event_id = e.id and eg.group_id = $1)
+     order by e.event_date desc`,
+    [id],
+  );
   const group = groups.find((g) => g.id === id);
   if (!group) notFound();
 
@@ -20,7 +29,6 @@ export default async function GroupPage({ params }: PageProps<"/famille/groupes/
   const memberIds = groupMembers.filter((gm) => gm.group_id === id).map((gm) => gm.member_id);
   const isMember = memberIds.includes(me.id);
   const others = members.filter((m) => !memberIds.includes(m.id));
-  const sharedLists = shares.filter((s) => s.group_id === id).map((s) => member(s.owner_id)).filter(Boolean);
 
   return (
     <>
@@ -71,10 +79,21 @@ export default async function GroupPage({ params }: PageProps<"/famille/groupes/
         )}
       </Section>
 
-      <Section title="Listes partagées avec ce groupe">
-        <p className="text-sm text-muted">
-          {sharedLists.length ? sharedLists.map((m) => m!.display_name).join(", ") : "Aucune liste pour l'instant."}
-        </p>
+      <Section title="Événements de ce groupe">
+        {events.length === 0 ? (
+          <p className="text-sm text-muted">Aucun événement pour l&apos;instant.</p>
+        ) : (
+          <ul className="card divide-y divide-line">
+            {events.map((e) => (
+              <li key={e.id}>
+                <Link href={`/evenements/${e.id}`} className="flex justify-between gap-3 px-4 py-2.5 text-sm hover:bg-brand-50">
+                  <span className={`font-bold ${isActive(e.event_date) ? "" : "text-muted"}`}>{e.name}</span>
+                  <span className="text-muted">{formatDate(e.event_date)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </Section>
 
       {isCreator && (

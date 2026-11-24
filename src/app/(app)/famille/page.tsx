@@ -6,8 +6,7 @@ import { createChild, createGroup, createInvitation, createResetLink, deleteInvi
 import { ConfirmButton, ResetLinkButton, ShareLink, SubmitButton } from "@/components/client";
 import { Avatar, Badge, Empty, Notice, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
-import { loadSharing } from "./load";
-import { ShareToggles } from "./share-toggles";
+import { loadGroups } from "./load";
 
 export const metadata: Metadata = { title: "Famille" };
 
@@ -17,21 +16,25 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
   const { q, me, members, children, parentLinks, member } = session;
   if (me.is_child) redirect("/");
 
-  const [{ groups, groupMembers, shares }, invRows] = await Promise.all([
-    loadSharing(session),
-    q("select token, group_id, expires_at, used_at, used_by from invitations order by created_at desc"),
+  const [{ groups, groupMembers }, invRows] = await Promise.all([
+    loadGroups(session),
+    q(
+      `select i.token, i.expires_at, i.used_at, i.used_by,
+              coalesce(array_agg(ig.group_id) filter (where ig.group_id is not null), '{}') as group_ids
+       from invitations i left join invitation_groups ig on ig.token = i.token
+       group by i.token order by i.created_at desc`,
+    ),
   ]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
-  const invitations = (invRows ?? []) as { token: string; group_id: string | null; expires_at: string; used_at: string | null; used_by: string | null }[];
+  const invitations = (invRows ?? []) as { token: string; group_ids: string[]; expires_at: string; used_at: string | null; used_by: string | null }[];
   const pending = invitations.filter((i) => !i.used_at && new Date(i.expires_at) > new Date());
   const used = invitations.filter((i) => i.used_at).slice(0, 5);
   const myGroups = groups.filter((g) => groupMembers.some((gm) => gm.group_id === g.id && gm.member_id === me.id));
-  const personShares = shares.filter((s) => s.owner_id === me.id && s.member_id);
 
   return (
     <>
-      <PageHeader title="Famille" subtitle="Enfants, groupes, invitations et visibilité de ta liste." />
+      <PageHeader title="Famille" subtitle="Groupes, invitations et enfants." />
 
       {sp.bienvenue && (
         <Notice tone="ok">
@@ -39,18 +42,13 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
         </Notice>
       )}
 
-      <Section title="Qui voit ma liste ?" id="visibilite" description="Les membres des groupes activés voient tes idées. Ils ne te disent jamais ce qu'ils ont choisi.">
-        <ShareToggles
-          owner={me}
-          groups={groups}
-          groupMembers={groupMembers}
-          shares={shares}
-          people={personShares.length ? personShares.map((s) => member(s.member_id)!).filter(Boolean) : undefined}
-          back="/famille#visibilite"
-        />
-      </Section>
+      <p className="mb-8 rounded-xl border-2 border-line bg-white px-4 py-3 text-sm text-ink">
+        💡 <strong>Comment ça marche :</strong> un événement est rattaché à un ou plusieurs groupes. Tous leurs membres le
+        voient et peuvent y ajouter leur liste d&apos;idées. Les idées sont visibles par les membres de ces groupes, jamais
+        par la personne qui les reçoit.
+      </p>
 
-      <Section title="Mes enfants" id="enfants" description="Tu choisis qui voit leur liste. Ils ne voient jamais ce qui a été choisi.">
+      <Section title="Mes enfants" id="enfants" description="Tu choisis les groupes de chaque enfant. Ils ne voient jamais ce qui a été choisi pour eux.">
         <div className="space-y-3">
           {children.length > 0 && (
             <ul className="card divide-y divide-line">
@@ -103,12 +101,25 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
       </Section>
 
       <Section title="Inviter quelqu'un" id="invitations" description="Chaque lien sert une seule fois et expire après 14 jours.">
-        <form action={createInvitation} className="mb-4 flex flex-wrap gap-2">
-          <select name="group" className="field flex-1" aria-label="Ajouter au groupe" defaultValue="">
-            <option value="">Sans groupe</option>
-            {myGroups.map((g) => <option key={g.id} value={g.id}>Ajouter au groupe « {g.name} »</option>)}
-          </select>
-          <SubmitButton className="btn-primary">Créer un lien</SubmitButton>
+        <form action={createInvitation} className="card mb-4 space-y-3 p-4">
+          {myGroups.length > 0 && (
+            <fieldset>
+              <legend className="label">La personne rejoindra les groupes :</legend>
+              <div className="flex flex-wrap gap-2">
+                {myGroups.map((g) => (
+                  <label
+                    key={g.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-full border-2 border-line bg-white px-3 py-1.5 text-sm font-bold has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700"
+                  >
+                    <input type="checkbox" name="groups" value={g.id} defaultChecked={myGroups.length === 1} className="size-4 accent-brand-600" />
+                    👥 {g.name}
+                  </label>
+                ))}
+              </div>
+              <p className="hint">Coche un ou plusieurs groupes (ou aucun).</p>
+            </fieldset>
+          )}
+          <SubmitButton className="btn-primary w-full sm:w-auto">Créer un lien d&apos;invitation</SubmitButton>
         </form>
         {pending.length > 0 && (
           <ul className="space-y-3">
@@ -116,7 +127,11 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
               <li key={i.token} className="card space-y-2 p-3">
                 <div className="flex items-center justify-between text-xs text-muted">
                   <span>
-                    {i.group_id ? `Groupe « ${groups.find((g) => g.id === i.group_id)?.name ?? "?"} » · ` : ""}
+                    {i.group_ids.length
+                      ? `${i.group_ids.length > 1 ? "Groupes" : "Groupe"} ${i.group_ids
+                          .map((gid) => `« ${groups.find((g) => g.id === gid)?.name ?? "?"} »`)
+                          .join(", ")} · `
+                      : ""}
                     expire le {new Date(i.expires_at).toLocaleDateString("fr-FR")}
                   </span>
                   <form action={deleteInvitation.bind(null, i.token)}>

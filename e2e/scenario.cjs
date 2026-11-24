@@ -28,14 +28,15 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.click("text=+ Créer");
   await papa.waitForURL(/groupes/);
   await papa.goto(BASE + "/famille");
-  await papa.selectOption('select[name="group"]', { index: 1 });
-  await papa.click("text=Créer un lien");
+  await papa.fill('input[name="name"][placeholder="Nom du groupe"]', "Côté papa");
+  await papa.click("text=+ Créer");
+  await papa.waitForURL(/groupes/);
+  await papa.goto(BASE + "/famille");
+  for (const g of ["Toute la famille", "Côté papa"]) await papa.locator("label", { hasText: g }).locator('input[name="groups"]').check();
+  await papa.click("text=Créer un lien d'invitation");
   await papa.waitForSelector('input[readonly]');
   const invite = await papa.inputValue('input[readonly]');
   ok(invite.includes("/invitation/"), "lien d'invitation créé");
-  // Visibilité de ma liste
-  await papa.locator("#visibilite form").first().locator("button").click();
-  await papa.waitForLoadState("networkidle");
   // 3. Enfant
   await papa.fill('input[placeholder="Prénom de l\'enfant"]', "Léo");
   await papa.click("text=+ Ajouter un enfant");
@@ -44,8 +45,7 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.fill("#login", "leo"); await papa.fill("#password", "secret1");
   await papa.click("button:has-text('Créer')");
   await papa.waitForURL(/ok=/);
-  await papa.locator("#visibilite form").first().locator("button").click();
-  await papa.waitForLoadState("networkidle");
+  ok(await papa.locator('#groupes [role="switch"][aria-checked="true"]').count() === 2, "Léo a rejoint les groupes de papa");
   await shot(papa, "enfant");
   await papa.goto(BASE + "/famille"); await shot(papa, "famille");
 
@@ -54,12 +54,12 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   maman.on("pageerror", (e) => console.log("PAGEERROR maman", e.message));
   await maman.goto(invite);
   await shot(maman, "invitation");
+  ok(await maman.locator("text=« Côté papa », « Toute la famille »").count() === 1, "l'invitation annonce les deux groupes");
   await maman.fill("#name", "Julie"); await maman.fill("#email", "maman@test.fr"); await maman.fill("#password", "motdepasse2");
   await maman.click("text=Créer mon compte");
   await maman.waitForURL(/bienvenue=1/);
   await maman.goto(BASE + "/famille");
-  await maman.locator("#visibilite form").first().locator("button").click();
-  await maman.waitForLoadState("networkidle");
+  ok(await maman.locator("#groupes li", { hasText: "membre" }).count() === 2, "Julie a rejoint les deux groupes");
 
   // Onglet d'une personne sur la page de l'événement
   const tab = async (page, name) => {
@@ -85,7 +85,7 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   // 5. Événement
   await papa.goto(BASE + "/evenements/nouveau");
   await papa.fill("#name", "Noël 2026"); await papa.fill("#date", date);
-  for (const cb of await papa.locator('input[name="beneficiaries"]').all()) await cb.check();
+  await papa.locator("label", { hasText: "Toute la famille" }).locator('input[name="groups"]').check();
   await shot(papa, "nouvel-evenement");
   await papa.click("text=Créer l'événement");
   await papa.waitForURL(/evenements\/[0-9a-f-]{36}$/);
@@ -170,6 +170,22 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await shot(maman, "accueil-maman");
   await papa.goto(BASE + "/");
   await shot(papa, "accueil-papa");
+
+  // 10 bis. Mamie, invitée APRÈS la création de Noël, voit tout de suite l'événement et les idées
+  await papa.goto(BASE + "/famille");
+  await papa.locator("label", { hasText: "Toute la famille" }).locator('input[name="groups"]').check();
+  await papa.click("text=Créer un lien d'invitation");
+  await papa.waitForURL(/ok=/);
+  const invite2 = await papa.locator("#invitations input[readonly]").first().inputValue();
+  const mamieCtx = await ctx(); const mamie = await mamieCtx.newPage();
+  await mamie.goto(invite2);
+  await mamie.fill("#name", "Mamie"); await mamie.fill("#email", "mamie@test.fr"); await mamie.fill("#password", "motdepasse3");
+  await mamie.click("text=Créer mon compte");
+  await mamie.waitForURL(/bienvenue=1/);
+  ok(await mamie.locator("h2", { hasText: "Noël 2026" }).count() === 1, "nouvelle arrivante : elle voit Noël");
+  ok(await mamie.locator("article", { hasText: "Casque audio" }).count() === 1, "nouvelle arrivante : elle voit les idées de Seb");
+  ok(await mamie.locator("text=Ta liste ici").count() === 1, "nouvelle arrivante : elle peut ajouter sa liste");
+  await shot(mamie, "accueil-mamie");
 
   // 11. Papa crée un lien « mot de passe » pour Julie, qui le change
   await papa.goto(BASE + "/famille#membres");

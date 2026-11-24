@@ -8,11 +8,11 @@ import { getSession } from "@/lib/session";
 function readEvent(fd: FormData, back: string) {
   const name = String(fd.get("name") ?? "").trim();
   const date = String(fd.get("date") ?? "");
-  const beneficiaries = [...new Set(fd.getAll("beneficiaries").map(String))];
+  const groups = [...new Set(fd.getAll("groups").map(String))];
   if (!name) redirectError(back, "Donne un nom à l'événement");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) redirectError(back, "Choisis une date");
-  if (!beneficiaries.length) redirectError(back, "Choisis au moins une personne qui reçoit des cadeaux");
-  return { name, date, beneficiaries };
+  if (!groups.length) redirectError(back, "Choisis au moins un groupe");
+  return { name, date, groups };
 }
 
 export async function createEvent(fd: FormData) {
@@ -25,10 +25,7 @@ export async function createEvent(fd: FormData) {
         "insert into events (name, event_date, created_by) values ($1, $2, $3) returning id",
         [ev.name, ev.date, me.id],
       );
-      await q(
-        "insert into event_beneficiaries (event_id, member_id) select $1, unnest($2::uuid[])",
-        [row.id, ev.beneficiaries],
-      );
+      await q("insert into event_groups (event_id, group_id) select $1, unnest($2::uuid[])", [row.id, ev.groups]);
       return row.id;
     }),
   );
@@ -48,14 +45,10 @@ export async function updateEvent(eventId: string, fd: FormData) {
         ev.date,
       ]);
       if (!rows.length) return false;
-      await q("delete from event_beneficiaries where event_id = $1 and not (member_id = any($2::uuid[]))", [
-        eventId,
-        ev.beneficiaries,
-      ]);
+      await q("delete from event_groups where event_id = $1 and not (group_id = any($2::uuid[]))", [eventId, ev.groups]);
       await q(
-        `insert into event_beneficiaries (event_id, member_id)
-         select $1, unnest($2::uuid[]) on conflict do nothing`,
-        [eventId, ev.beneficiaries],
+        "insert into event_groups (event_id, group_id) select $1, unnest($2::uuid[]) on conflict do nothing",
+        [eventId, ev.groups],
       );
       return true;
     }),

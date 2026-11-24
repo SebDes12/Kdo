@@ -9,12 +9,17 @@ export const IDEAS_SQL = `
                    from idea_links l where l.idea_id = i.id), '[]') as idea_links
   from ideas i`;
 
-/** Événements avec leurs bénéficiaires (à compléter par un WHERE sur l'alias e). */
+/** Événements avec leurs groupes (à compléter par un WHERE sur l'alias e). */
 export const EVENTS_SQL = `
   select e.id, e.name, e.event_date, e.created_by,
-         coalesce((select json_agg(json_build_object('member_id', b.member_id))
-                   from event_beneficiaries b where b.event_id = e.id), '[]') as event_beneficiaries
+         coalesce((select json_agg(json_build_object('group_id', eg.group_id))
+                   from event_groups eg where eg.event_id = e.id), '[]') as event_groups
   from events e`;
+
+/** Condition SQL : le membre $n fait partie d'un groupe de l'événement e. */
+export const memberInEvent = (param: string) => `exists (
+  select 1 from event_groups eg join group_members gm on gm.group_id = eg.group_id
+  where eg.event_id = e.id and gm.member_id = ${param})`;
 
 /** Nombre d'idées « en réserve » (sans événement ou d'un événement passé) par bénéficiaire. */
 export const RESERVE_COUNTS_SQL = `
