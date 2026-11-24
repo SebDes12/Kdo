@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createChild, createGroup, createInvitation, createResetLink, deleteInvitation } from "@/app/actions/family";
-import { ConfirmButton, ResetLinkButton, ShareLink, SubmitButton } from "@/components/client";
+import { ConfirmButton, LinkButton, ShareLink, SubmitButton } from "@/components/client";
 import { Avatar, Badge, Empty, Notice, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
 import { loadGroups } from "./load";
@@ -185,7 +185,14 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
                   {m.is_child && <span className="text-xs text-muted">enfant de {parents.join(" et ")}</span>}
                   {!m.is_child && m.id !== me.id && (
                     <div className="ml-auto">
-                      <ResetLinkButton name={m.display_name} action={createResetLink.bind(null, m.id)} />
+                      <LinkButton
+                        label="🔑 Mot de passe"
+                        title={`Nouveau mot de passe pour ${m.display_name} ?`}
+                        message="Tu vas obtenir un lien à lui envoyer (valable 2 jours). Son mot de passe actuel reste valable jusqu'à ce qu'il en choisisse un nouveau."
+                        confirmLabel="Créer le lien"
+                        shareText={`Envoie ce lien à ${m.display_name} (valable 2 jours, une seule fois) :`}
+                        action={createResetLink.bind(null, m.id)}
+                      />
                     </div>
                   )}
                 </li>

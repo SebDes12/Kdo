@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/auth-cookie";
 
-const PUBLIC_PATHS = ["/connexion", "/bienvenue", "/invitation", "/reinitialiser", "/mot-de-passe-oublie"];
+const PUBLIC_PATHS = ["/connexion", "/bienvenue", "/invitation", "/reinitialiser", "/activer", "/mot-de-passe-oublie"];
 
 /** Redirige vers /connexion sans cookie de session (sa validité est vérifiée en base). */
 export function proxy(request: NextRequest) {

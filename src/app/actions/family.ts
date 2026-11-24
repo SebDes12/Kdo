@@ -203,6 +203,20 @@ export async function deleteInvitation(token: string) {
 
 export type ResetLinkState = { link?: string; error?: string };
 
+/** Lien d'activation à envoyer à son enfant pour qu'il se connecte. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function createChildLoginLink(childId: string, _prev: ResetLinkState): Promise<ResetLinkState> {
+  const { q } = await getSession();
+  try {
+    const [row] = await q<{ token: string }>("select create_child_login_link($1) as token", [childId]);
+    const h = await headers();
+    const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
+    return { link: `${origin}/activer/${row.token}` };
+  } catch (e) {
+    return { error: errorMessage(e) };
+  }
+}
+
 /** Génère un lien de réinitialisation du mot de passe d'un autre adulte. */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function createResetLink(memberId: string, _prev: ResetLinkState): Promise<ResetLinkState> {

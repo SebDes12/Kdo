@@ -321,6 +321,18 @@ select tests.ok((select count(*) from public.contributions where idea_id = :I_PE
 update public.events set event_date = current_date + 30, end_date = current_date + 30 where id = :E_NOEL;
 set role kdo_user;
 
+-- Lien d'activation pour un enfant
+select tests.login(:PAPA);
+select tests.ok(length(public.create_child_login_link(:M_LEO)) = 64, 'papa crée un lien de connexion pour Léo');
+select tests.ok(length(public.create_child_login_link(:M_LEO)) = 64, 'un nouveau lien remplace le précédent');
+reset role;
+select tests.ok((select count(*) from public.login_links where member_id = :M_LEO and used_at is null) = 1, 'un seul lien valable à la fois');
+set role kdo_user;
+select tests.refused(format('select public.create_child_login_link(%L)', :M_MAMAN), 'lien pour un adulte');
+select tests.refused('select * from public.login_links', 'lire les liens de connexion');
+select tests.login(:MAMIE);
+select tests.refused(format('select public.create_child_login_link(%L)', :M_LEO), 'lien pour l''enfant de quelqu''un d''autre');
+
 -- Suppression d'un enfant en double
 select tests.login(:MAMAN);
 select public.create_child('Léo (doublon)') as doublon \gset

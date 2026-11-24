@@ -264,15 +264,29 @@ export function ShareLink({ url }: { url: string }) {
   );
 }
 
-type ResetState = { link?: string; error?: string };
+type LinkState = { link?: string; error?: string };
 
-/** Bouton « Mot de passe » : génère un lien de réinitialisation pour un autre adulte. */
-export function ResetLinkButton({
-  name,
+/**
+ * Bouton qui génère (après confirmation) un lien à usage unique à envoyer
+ * à quelqu'un : réinitialisation de mot de passe, connexion d'un enfant…
+ */
+export function LinkButton({
+  label,
+  title,
+  message,
+  confirmLabel,
+  shareText,
   action,
+  className = "btn-ghost py-1 text-xs",
 }: {
-  name: string;
-  action: (prev: ResetState) => Promise<ResetState>;
+  label: string;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  /** Texte affiché au-dessus du lien obtenu. */
+  shareText: string;
+  action: (prev: LinkState) => Promise<LinkState>;
+  className?: string;
 }) {
   const [state, run, pending] = useActionState(action, {});
   return (
@@ -280,25 +294,26 @@ export function ResetLinkButton({
       {!state.link && (
         <form action={run}>
           <ConfirmDialog
-            triggerLabel="🔑 Mot de passe"
-            triggerClassName="btn-ghost py-1 text-xs"
+            triggerLabel={label}
+            triggerClassName={className}
             disabled={pending}
-            title={`Nouveau mot de passe pour ${name} ?`}
-            message={`Tu vas obtenir un lien à lui envoyer (valable 2 jours). Son mot de passe actuel restera valable jusqu'à ce qu'il en choisisse un nouveau.`}
+            title={title}
+            message={message}
             confirm={
               <button type="submit" data-confirm className="btn-primary">
-                Créer le lien
+                {confirmLabel}
               </button>
             }
             cancelLabel="Revenir"
             danger={false}
+            icon="🔗"
           />
         </form>
       )}
       {state.error && <p className="mt-1 text-xs font-bold text-red-700">{state.error}</p>}
       {state.link && (
         <div className="mt-2 space-y-1">
-          <p className="text-xs text-muted">Envoie ce lien à {name} (valable 2 jours, une seule fois) :</p>
+          <p className="text-xs text-muted">{shareText}</p>
           <ShareLink url={state.link} />
         </div>
       )}
