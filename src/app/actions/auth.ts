@@ -102,16 +102,18 @@ export async function acceptInvitation(token: string, fd: FormData) {
   const acc = readAccount(fd, back);
   await run(back, () =>
     asAdmin(async (q) => {
-      const [inv] = await q<{ group_id: string | null }>(
-        `select group_id from invitations
+      const [inv] = await q(
+        `select token from invitations
          where token = $1 and used_at is null and expires_at > now() for update`,
         [token],
       );
       if (!inv) throw new UserError("Cette invitation n'est plus valable");
       const memberId = await createAdult(q, acc);
-      if (inv.group_id) {
-        await q("insert into group_members (group_id, member_id) values ($1, $2)", [inv.group_id, memberId]);
-      }
+      await q(
+        `insert into group_members (group_id, member_id)
+         select group_id, $2 from invitation_groups where token = $1 on conflict do nothing`,
+        [token, memberId],
+      );
       await q("update invitations set used_at = now(), used_by = $2 where token = $1", [token, memberId]);
     }),
   );

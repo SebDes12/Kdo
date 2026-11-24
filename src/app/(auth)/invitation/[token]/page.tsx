@@ -11,11 +11,12 @@ export const metadata: Metadata = { title: "Invitation" };
 export default async function InvitationPage({ params }: PageProps<"/invitation/[token]">) {
   const { token } = await params;
   const [inv] = await asAdmin((q) =>
-    q<{ creator: string | null; group: string | null }>(
-      `select m.display_name as creator, g.name as "group"
+    q<{ creator: string | null; groups: string[] }>(
+      `select m.display_name as creator,
+              coalesce((select array_agg(g.name order by g.name) from invitation_groups ig
+                        join groups g on g.id = ig.group_id where ig.token = i.token), '{}') as groups
        from invitations i
        left join members m on m.id = i.created_by
-       left join groups g on g.id = i.group_id
        where i.token = $1 and i.used_at is null and i.expires_at > now()`,
       [token],
     ),
@@ -28,12 +29,14 @@ export default async function InvitationPage({ params }: PageProps<"/invitation/
       </AuthCard>
     );
   }
-  const { creator, group } = inv;
+  const { creator, groups } = inv;
 
   return (
     <AuthCard
       title="Rejoins la famille 🎁"
-      subtitle={`${creator ?? "Quelqu'un"} t'invite sur Kdo${group ? ` (groupe « ${group} »)` : ""}.`}
+      subtitle={`${creator ?? "Quelqu'un"} t'invite sur Kdo${
+        groups.length ? ` (${groups.map((g) => `« ${g} »`).join(", ")})` : ""
+      }.`}
     >
       <form action={acceptInvitation.bind(null, token)} className="space-y-4">
         <AccountFields />

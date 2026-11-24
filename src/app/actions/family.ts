@@ -161,10 +161,15 @@ export async function removeGroupMember(groupId: string, memberId: string) {
 // ------------------------------------------------------------- Invitations
 
 export async function createInvitation(fd: FormData) {
-  const { q, me } = await getSession();
-  const group = str(fd, "group") || null;
+  const { tx, me } = await getSession();
+  const groups = [...new Set(fd.getAll("groups").map(String).filter(Boolean))];
   await attempt("/famille", () =>
-    q("insert into invitations (created_by, group_id) values ($1, $2)", [me.id, group]),
+    tx(async (q) => {
+      const [inv] = await q<{ token: string }>("insert into invitations (created_by) values ($1) returning token", [me.id]);
+      if (groups.length) {
+        await q("insert into invitation_groups (token, group_id) select $1, unnest($2::uuid[])", [inv.token, groups]);
+      }
+    }),
   );
   done("/famille#invitations", "Lien d'invitation créé : copie-le et envoie-le");
 }

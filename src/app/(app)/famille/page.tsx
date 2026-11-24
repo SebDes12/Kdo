@@ -19,11 +19,16 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
 
   const [{ groups, groupMembers, shares }, invRows] = await Promise.all([
     loadSharing(session),
-    q("select token, group_id, expires_at, used_at, used_by from invitations order by created_at desc"),
+    q(
+      `select i.token, i.expires_at, i.used_at, i.used_by,
+              coalesce(array_agg(ig.group_id) filter (where ig.group_id is not null), '{}') as group_ids
+       from invitations i left join invitation_groups ig on ig.token = i.token
+       group by i.token order by i.created_at desc`,
+    ),
   ]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
-  const invitations = (invRows ?? []) as { token: string; group_id: string | null; expires_at: string; used_at: string | null; used_by: string | null }[];
+  const invitations = (invRows ?? []) as { token: string; group_ids: string[]; expires_at: string; used_at: string | null; used_by: string | null }[];
   const pending = invitations.filter((i) => !i.used_at && new Date(i.expires_at) > new Date());
   const used = invitations.filter((i) => i.used_at).slice(0, 5);
   const myGroups = groups.filter((g) => groupMembers.some((gm) => gm.group_id === g.id && gm.member_id === me.id));
@@ -103,12 +108,25 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
       </Section>
 
       <Section title="Inviter quelqu'un" id="invitations" description="Chaque lien sert une seule fois et expire après 14 jours.">
-        <form action={createInvitation} className="mb-4 flex flex-wrap gap-2">
-          <select name="group" className="field flex-1" aria-label="Ajouter au groupe" defaultValue="">
-            <option value="">Sans groupe</option>
-            {myGroups.map((g) => <option key={g.id} value={g.id}>Ajouter au groupe « {g.name} »</option>)}
-          </select>
-          <SubmitButton className="btn-primary">Créer un lien</SubmitButton>
+        <form action={createInvitation} className="card mb-4 space-y-3 p-4">
+          {myGroups.length > 0 && (
+            <fieldset>
+              <legend className="label">La personne rejoindra les groupes :</legend>
+              <div className="flex flex-wrap gap-2">
+                {myGroups.map((g) => (
+                  <label
+                    key={g.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-full border-2 border-line bg-white px-3 py-1.5 text-sm font-bold has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700"
+                  >
+                    <input type="checkbox" name="groups" value={g.id} defaultChecked={myGroups.length === 1} className="size-4 accent-brand-600" />
+                    👥 {g.name}
+                  </label>
+                ))}
+              </div>
+              <p className="hint">Coche un ou plusieurs groupes (ou aucun).</p>
+            </fieldset>
+          )}
+          <SubmitButton className="btn-primary w-full sm:w-auto">Créer un lien d&apos;invitation</SubmitButton>
         </form>
         {pending.length > 0 && (
           <ul className="space-y-3">
@@ -116,7 +134,11 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
               <li key={i.token} className="card space-y-2 p-3">
                 <div className="flex items-center justify-between text-xs text-muted">
                   <span>
-                    {i.group_id ? `Groupe « ${groups.find((g) => g.id === i.group_id)?.name ?? "?"} » · ` : ""}
+                    {i.group_ids.length
+                      ? `${i.group_ids.length > 1 ? "Groupes" : "Groupe"} ${i.group_ids
+                          .map((gid) => `« ${groups.find((g) => g.id === gid)?.name ?? "?"} »`)
+                          .join(", ")} · `
+                      : ""}
                     expire le {new Date(i.expires_at).toLocaleDateString("fr-FR")}
                   </span>
                   <form action={deleteInvitation.bind(null, i.token)}>

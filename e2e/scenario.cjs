@@ -28,8 +28,12 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.click("text=+ Créer");
   await papa.waitForURL(/groupes/);
   await papa.goto(BASE + "/famille");
-  await papa.selectOption('select[name="group"]', { index: 1 });
-  await papa.click("text=Créer un lien");
+  await papa.fill('input[name="name"][placeholder="Nom du groupe"]', "Côté papa");
+  await papa.click("text=+ Créer");
+  await papa.waitForURL(/groupes/);
+  await papa.goto(BASE + "/famille");
+  for (const g of ["Toute la famille", "Côté papa"]) await papa.locator("label", { hasText: g }).locator('input[name="groups"]').check();
+  await papa.click("text=Créer un lien d'invitation");
   await papa.waitForSelector('input[readonly]');
   const invite = await papa.inputValue('input[readonly]');
   ok(invite.includes("/invitation/"), "lien d'invitation créé");
@@ -54,10 +58,12 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   maman.on("pageerror", (e) => console.log("PAGEERROR maman", e.message));
   await maman.goto(invite);
   await shot(maman, "invitation");
+  ok(await maman.locator("text=« Côté papa », « Toute la famille »").count() === 1, "l'invitation annonce les deux groupes");
   await maman.fill("#name", "Julie"); await maman.fill("#email", "maman@test.fr"); await maman.fill("#password", "motdepasse2");
   await maman.click("text=Créer mon compte");
   await maman.waitForURL(/bienvenue=1/);
   await maman.goto(BASE + "/famille");
+  ok(await maman.locator("#groupes li", { hasText: "membre" }).count() === 2, "Julie a rejoint les deux groupes");
   await maman.locator("#visibilite form").first().locator("button").click();
   await maman.waitForLoadState("networkidle");
 

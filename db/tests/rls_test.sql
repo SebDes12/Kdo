@@ -254,5 +254,19 @@ select tests.refused(format('select public.create_password_reset(%L)', :M_PAPA),
 select tests.login(:LEO_U);
 select tests.ok(length(public.create_password_reset(:M_MAMAN)) = 64, 'Léo émancipé est adulte : il peut aussi aider');
 
+-- Invitations vers plusieurs groupes
+select tests.login(:PAPA);
+insert into public.invitations (created_by) values (:M_PAPA) returning token as inv_papa \gset
+insert into public.invitation_groups (token, group_id) values (:'inv_papa', :G_FAM);
+select tests.ok((select count(*) from public.invitation_groups where token = :'inv_papa') = 1, 'papa ajoute un groupe à son invitation');
+select tests.login(:ONCLE);
+insert into public.invitations (created_by) values (:M_ONCLE) returning token as inv_oncle \gset
+select tests.refused(format('insert into public.invitation_groups (token, group_id) values (%L, %L)', :'inv_oncle', :G_FAM),
+  'ajouter un groupe dont on n''est pas membre');
+select tests.refused(format('insert into public.invitation_groups (token, group_id) values (%L, %L)', :'inv_papa', :G_FAM),
+  'modifier l''invitation de quelqu''un d''autre');
+select tests.login(:MAMAN);
+select tests.ok((select count(*) from public.invitation_groups) = 0, 'maman ne voit pas les invitations de papa');
+
 reset role;
 select 'OK : toutes les règles sont respectées' as resultat;
