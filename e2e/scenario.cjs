@@ -6,6 +6,7 @@ const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const OUT = process.env.SHOTS_DIR ?? __dirname + "/shots";
 require("fs").mkdirSync(OUT, { recursive: true });
 const date = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+const dateFin = new Date(Date.now() + 31 * 864e5).toISOString().slice(0, 10);
 let n = 0;
 const shot = (p, name) => p.screenshot({ path: `${OUT}/${String(++n).padStart(2, "0")}-${name}.png`, fullPage: true });
 const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok -", m); };
@@ -84,7 +85,7 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
 
   // 5. Événement
   await papa.goto(BASE + "/evenements/nouveau");
-  await papa.fill("#name", "Noël 2026"); await papa.fill("#date", date);
+  await papa.fill("#name", "Noël 2026"); await papa.fill("#date", date); await papa.fill("#end", dateFin);
   await papa.locator("label", { hasText: "Toute la famille" }).locator('input[name="groups"]').check();
   await shot(papa, "nouvel-evenement");
   await papa.click("text=Créer l'événement");
@@ -171,6 +172,25 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await shot(maman, "accueil-maman");
   await papa.goto(BASE + "/");
   await shot(papa, "accueil-papa");
+
+  // 10 ter. Papa supprime la perceuse que Julie a choisie : elle est prévenue et garde son choix
+  await papa.goto(BASE + "/");
+  await papa.locator("nav a:visible", { hasText: "Ma liste" }).first().click();
+  papa.once("dialog", (d) => d.accept());
+  await papa.locator("article", { hasText: "Perceuse" }).getByLabel(/Supprimer/).click();
+  await papa.waitForURL(/ok=/);
+  ok(await papa.locator("article", { hasText: "Perceuse" }).count() === 0, "papa ne voit plus la perceuse supprimée");
+  await maman.goto(BASE + "/");
+  ok(await maman.locator("text=a été retiré d'une liste").count() === 1, "Julie est avertie sur l'accueil");
+  ok(await maman.locator("article", { hasText: "Perceuse" }).count() === 0, "la perceuse n'est plus proposée à l'accueil");
+  await maman.locator("text=a été retiré d'une liste").click();
+  await maman.waitForURL(/j-offre/);
+  ok(await maman.locator("li", { hasText: "Perceuse" }).locator("text=l'a retirée de sa liste").count() === 1, "J'offre : avertissement sur la perceuse");
+  await shot(maman, "j-offre-avertissement");
+  maman.once("dialog", (d) => d.accept());
+  await maman.locator("li", { hasText: "Perceuse" }).locator("text=Annuler mon choix").click();
+  await maman.waitForURL(/ok=/);
+  ok(await maman.locator("li", { hasText: "Perceuse" }).count() === 0, "Julie a annulé son choix");
 
   // 10 bis. Mamie, invitée APRÈS la création de Noël, voit tout de suite l'événement et les idées
   await papa.goto(BASE + "/famille");

@@ -60,3 +60,34 @@ export function errorMessage(e: unknown): string {
 export function isUuid(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 }
+
+/** Période d'un événement : du début (event_date) à la fin (end_date). */
+type Period = { event_date: string; end_date?: string | null };
+
+export function endOf(e: Period): string {
+  return e.end_date ?? e.event_date;
+}
+
+/** L'événement est encore ouvert (jusqu'à sa date de fin incluse). */
+export function isOpen(e: Period): boolean {
+  return endOf(e) >= today();
+}
+
+const UTC = (d: string) => new Date(d + "T00:00:00Z");
+
+/** « jeu. 24 décembre 2026 » ou « 24–26 décembre 2026 ». */
+export function formatPeriod(e: Period): string {
+  if (endOf(e) === e.event_date) return formatDate(e.event_date);
+  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+    .formatRange(UTC(e.event_date), UTC(endOf(e)));
+}
+
+/** « dans 3 jours », « en cours jusqu'au 26 déc. », « dernier jour », « passé ». */
+export function eventCountdown(e: Period): string {
+  const end = endOf(e);
+  if (e.event_date > today()) return formatCountdown(e.event_date);
+  if (end < today()) return "passé";
+  if (end === today()) return e.event_date === end ? "aujourd'hui" : "dernier jour";
+  const short = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" }).format(UTC(end));
+  return `en cours jusqu'au ${short}`;
+}

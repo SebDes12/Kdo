@@ -11,7 +11,7 @@ export function EventForm({
   action: (fd: FormData) => Promise<void>;
   /** Groupes dont je suis membre. */
   groups: (Group & { count: number })[];
-  initial?: { name: string; date: string; groups: string[] };
+  initial?: { name: string; date: string; end: string; groups: string[] };
   submitLabel: string;
 }) {
   return (
@@ -20,9 +20,22 @@ export function EventForm({
         <label className="label" htmlFor="name">Nom</label>
         <input id="name" name="name" className="field" placeholder="Noël 2026, Anniversaire de Léo…" defaultValue={initial?.name} required maxLength={80} />
       </div>
-      <div>
-        <label className="label" htmlFor="date">Date</label>
-        <input id="date" name="date" type="date" className="field" defaultValue={initial?.date} required />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="date">Date (début)</label>
+          <input id="date" name="date" type="date" className="field" defaultValue={initial?.date} required />
+        </div>
+        <div>
+          <label className="label" htmlFor="end">Jusqu&apos;au (facultatif)</label>
+          <input
+            id="end"
+            name="end"
+            type="date"
+            className="field"
+            defaultValue={initial && initial.end !== initial.date ? initial.end : ""}
+          />
+          <p className="hint">Si on fête en plusieurs fois. On peut choisir des cadeaux jusqu&apos;à cette date.</p>
+        </div>
       </div>
       <fieldset>
         <legend className="label">Pour quel(s) groupe(s) ?</legend>

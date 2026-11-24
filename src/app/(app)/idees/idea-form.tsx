@@ -79,9 +79,7 @@ export function IdeaForm({
           {events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
           <option value="">En réserve (sans événement)</option>
         </select>
-        {idea?.event_id && events.some((e) => e.id === idea.event_id) && (
-          <p className="hint">Une idée rattachée à un événement en cours ne peut pas en changer.</p>
-        )}
+        <p className="hint">Tu peux la retirer ou la déplacer à tout moment : si quelqu&apos;un l&apos;a déjà choisie, sa réservation est conservée.</p>
       </div>
 
       <div>

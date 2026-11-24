@@ -98,8 +98,8 @@ export async function saveIdea(fd: FormData) {
 export async function deleteIdea(ideaId: string, back: string) {
   const { q } = await getSession();
   const path = safePath(back);
-  const rows = await attempt(path, () => q("delete from ideas where id = $1 returning id", [ideaId]));
-  if (!rows.length) redirectError(path, "Action non autorisée");
+  // Suppression logique : la base décide (effacement physique à la fin de l'événement)
+  await attempt(path, () => q("select delete_idea($1)", [ideaId]));
   revalidatePath("/", "layout");
   redirectOk(path, "Idée supprimée");
 }

@@ -25,7 +25,7 @@ export default async function EditEventPage({ params }: PageProps<"/evenements/[
       <EventForm
         action={updateEvent.bind(null, id)}
         groups={await myGroups(session)}
-        initial={{ name: ev.name, date: ev.event_date, groups: (ev.event_groups ?? []).map((g) => g.group_id) }}
+        initial={{ name: ev.name, date: ev.event_date, end: ev.end_date, groups: (ev.event_groups ?? []).map((g) => g.group_id) }}
         submitLabel="Enregistrer"
       />
       <form action={deleteEvent.bind(null, id)} className="mt-8 border-t border-line pt-6">
