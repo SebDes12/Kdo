@@ -76,7 +76,7 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
 
   // 4 bis. Papa crée une idée pour Léo AVANT l'événement (elle part en réserve)
   await papa.goto(BASE + "/");
-  await papa.locator("a", { hasText: "Nos listes" }).click();
+  await papa.locator("nav a:visible", { hasText: "Ma liste" }).first().click();
   await papa.locator('nav[aria-label="Choisir la liste"] a', { hasText: "Léo" }).click();
   await papa.waitForURL(new RegExp("/listes/" + leoId));
   await addIdea(papa, "Livre de dinosaures");
@@ -163,8 +163,9 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.goto(BASE + "/listes/" + leoId);
   ok(await papa.locator("article", { hasText: "Doudou" }).locator("text=Choisi par Julie").count() === 1, "la liste de Léo indique qui a choisi");
   await shot(papa, "liste-leo");
-  await maman.goto(BASE + "/mes-cadeaux");
-  await shot(maman, "mes-cadeaux");
+  await maman.locator("nav a:visible", { hasText: "J'offre" }).first().click();
+  await maman.waitForURL(/j-offre/);
+  await shot(maman, "j-offre");
   ok(await maman.locator("text=Perceuse sans fil").count() === 1, "mes cadeaux liste la perceuse");
   await maman.goto(BASE + "/");
   await shot(maman, "accueil-maman");

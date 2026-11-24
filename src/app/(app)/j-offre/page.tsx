@@ -5,7 +5,7 @@ import { formatCountdown, formatDate, formatPrice, hostname, isActive } from "@/
 import { IDEAS_SQL } from "@/lib/ideas";
 import { getSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Mes cadeaux" };
+export const metadata: Metadata = { title: "J'offre" };
 
 type Row = {
   percent: number;
@@ -83,7 +83,7 @@ export default async function MyGiftsPage() {
 
   return (
     <>
-      <PageHeader title="Mes cadeaux" subtitle="Les idées que tu as choisies, pour ne rien oublier." />
+      <PageHeader title="Ce que j'offre" subtitle="Les cadeaux que tu as choisis pour les autres, pour ne rien oublier." />
       {upcoming.length === 0 ? (
         <Empty>
           Tu n&apos;as encore rien choisi.
