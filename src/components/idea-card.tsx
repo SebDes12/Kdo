@@ -20,9 +20,11 @@ type Props = {
   back: string;
   member: (id: string | null | undefined) => Member | undefined;
   footer?: React.ReactNode;
+  /** "row" : ligne à l'intérieur d'un bloc (pas de cadre propre). */
+  variant?: "card" | "row";
 };
 
-export function IdeaCard({ idea, mode, status, open, canEdit, back, member, footer }: Props) {
+export function IdeaCard({ idea, mode, status, open, canEdit, back, member, footer, variant = "card" }: Props) {
   // Une idée en réserve (sans événement) n'a pas d'état « choisi ».
   const st = mode !== "owner" && idea.event_id ? status : undefined;
   const takenByOthers = !!st && st.total >= 100 && st.mine === 0;
@@ -30,7 +32,13 @@ export function IdeaCard({ idea, mode, status, open, canEdit, back, member, foot
   const links = [...idea.idea_links].sort((a, b) => a.position - b.position);
 
   return (
-    <article className={`card overflow-hidden ${st && st.mine > 0 ? "ring-2 ring-emerald-400" : ""}`}>
+    <article
+      className={
+        variant === "row"
+          ? `${st && st.mine > 0 ? "bg-emerald-50/70" : "bg-white"}`
+          : `card overflow-hidden ${st && st.mine > 0 ? "ring-2 ring-emerald-400" : ""}`
+      }
+    >
       <div className="flex gap-3 p-4">
         {idea.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
