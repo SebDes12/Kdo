@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { getSession } from "@/lib/session";
 import { safePath } from "@/lib/redirect";
+import { isUuid } from "@/lib/format";
 import { IdeaForm } from "../idea-form";
 import { upcomingEventsFor } from "../load";
 
@@ -16,7 +17,13 @@ export default async function NewIdeaPage({ searchParams }: PageProps<"/idees/no
   const beneficiary = member(pourId);
   if (!beneficiary) notFound();
   if (beneficiary.id !== me.id && !isParentOf(beneficiary.id)) {
-    const [{ ok }] = await q<{ ok: boolean }>("select can_view_list($1) as ok", [beneficiary.id]);
+    // Suggestion secrète : seulement sur un événement commun
+    const ev = typeof sp.evenement === "string" && isUuid(sp.evenement) ? sp.evenement : null;
+    if (!ev) notFound();
+    const [{ ok }] = await q<{ ok: boolean }>("select is_event_member($1) and member_in_event($1, $2) as ok", [
+      ev,
+      beneficiary.id,
+    ]);
     if (!ok) notFound();
   }
   const back = safePath(sp.back as string | undefined, `/listes/${me.id}`);

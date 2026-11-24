@@ -31,11 +31,13 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
       event,
       ideas: await q<Idea>(`${IDEAS_SQL} where i.event_id = $1`, [id]),
       contributions: await q<Contribution>(`${CONTRIBUTIONS_SQL} where event_id = $1`, [id]),
-      viewable: new Map(
-        (await q<{ member_id: string; ok: boolean }>(
-          "select member_id, can_view_list(member_id) as ok from event_beneficiaries where event_id = $1",
+      // Membres des groupes de l'événement
+      eventMembers: new Set(
+        (await q<{ member_id: string }>(
+          `select distinct gm.member_id from event_groups eg
+           join group_members gm on gm.group_id = eg.group_id where eg.event_id = $1`,
           [id],
-        )).map((r) => [r.member_id, r.ok]),
+        )).map((r) => r.member_id),
       ),
       reserve: new Map(
         (await q<{ beneficiary_id: string; n: number }>(RESERVE_COUNTS_SQL, [[me.id, ...childIds]])).map(
@@ -45,13 +47,16 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
     };
   });
   if (!data) notFound();
-  const { event, ideas, contributions, viewable, reserve } = data;
+  const { event, ideas, contributions, eventMembers, reserve } = data;
   const open = isActive(event.event_date);
   const status = (i: Idea) => ideaStatus(i.id, id, contributions, me.id);
 
-  // Les autres d'abord (on vient pour offrir), moi en dernier.
-  const people = (event.event_beneficiaries ?? [])
-    .map((b) => member(b.member_id))
+  // Onglets : les personnes qui ont une liste ici, mes enfants membres, et moi en dernier.
+  const ids = new Set<string>(ideas.map((i) => i.beneficiary_id));
+  for (const c of childIds) if (eventMembers.has(c)) ids.add(c);
+  if (eventMembers.has(me.id)) ids.add(me.id);
+  const people = [...ids]
+    .map((pid) => member(pid))
     .filter((m): m is NonNullable<typeof m> => !!m)
     .sort((a, b) => Number(a.id === me.id) - Number(b.id === me.id) || a.display_name.localeCompare(b.display_name));
   const freeCount = (pid: string) =>
@@ -60,12 +65,11 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
   const requested = typeof sp.pour === "string" ? sp.pour : null;
   const current =
     people.find((p) => p.id === requested) ??
-    people.find((p) => p.id !== me.id && viewable.get(p.id)) ??
-    people[0];
-  if (!current) notFound();
+    people.find((p) => p.id !== me.id && ideas.some((i) => i.beneficiary_id === p.id)) ??
+    people[0] ??
+    me;
 
   const isMe = current.id === me.id;
-  const canSee = viewable.get(current.id);
   const canManage = isMe || isParentOf(current.id);
   const back = `/evenements/${id}?pour=${current.id}`;
   const addHref = `/idees/nouvelle?pour=${current.id}&evenement=${id}&back=${encodeURIComponent(back)}`;
@@ -113,7 +117,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
       <nav className="sticky top-14 z-20 -mx-4 mb-5 flex gap-2 overflow-x-auto border-b-2 border-line bg-paper px-4 py-2.5" aria-label="Pour qui ?">
         {people.map((p) => {
           const active = p.id === current.id;
-          const n = viewable.get(p.id) ? freeCount(p.id) : null;
+          const n = freeCount(p.id);
           return (
             <Link
               key={p.id}
@@ -134,7 +138,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="section-title">{isMe ? "Ma liste" : `Les idées de ${current.display_name}`}</h2>
-        {canSee && open && (
+        {open && (!isMe || eventMembers.has(me.id)) && (
           <Link href={addHref} className="btn-secondary shrink-0 py-2 text-xs">
             {canManage ? "+ Ajouter" : "+ Suggérer une idée"}
           </Link>
@@ -159,12 +163,10 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
         </Link>
       )}
 
-      {!canSee ? (
-        <Empty icon="🔒">La liste de {current.display_name} n&apos;est pas partagée avec toi.</Empty>
-      ) : list.length === 0 ? (
+      {list.length === 0 ? (
         <Empty>
           {isMe ? "Tu n'as pas encore d'idée pour cet événement." : `${current.display_name} n'a pas encore d'idée ici.`}
-          {open && (
+          {open && (!isMe || eventMembers.has(me.id)) && (
             <div className="mt-3">
               <Link href={addHref} className="btn-primary">{canManage ? "Ajouter une idée" : "Suggérer une idée"}</Link>
             </div>

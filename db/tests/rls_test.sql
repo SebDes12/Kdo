@@ -77,12 +77,8 @@ select public.create_child('Léo') as leo \gset
 select public.add_coparent(:M_LEO, :M_MAMAN);
 select public.create_group('Famille proche') as famille \gset
 \set G_FAM '''':famille''''
-insert into public.group_members (group_id, member_id) values (:G_FAM, :M_MAMAN), (:G_FAM, :M_MAMIE);
--- Papa partage sa liste avec le groupe ; et celle de Léo avec le groupe
-insert into public.list_shares (owner_id, group_id) values (:M_PAPA, :G_FAM), (:M_LEO, :G_FAM);
--- Maman partage sa liste avec le groupe
-select tests.login(:MAMAN);
-insert into public.list_shares (owner_id, group_id) values (:M_MAMAN, :G_FAM);
+-- Papa (membre du groupe) y ajoute maman, mamie et son fils Léo ; l'oncle n'en fait pas partie
+insert into public.group_members (group_id, member_id) values (:G_FAM, :M_MAMAN), (:G_FAM, :M_MAMIE), (:G_FAM, :M_LEO);
 
 -- Léo obtient un identifiant (fait côté serveur, hors kdo_user)
 reset role;
@@ -92,11 +88,11 @@ insert into public.sessions (token_hash, member_id, expires_at) values ('session
 set role kdo_user;
 \set LEO_U :M_LEO
 
--- Un enfant ne règle pas la visibilité de sa liste
+-- Un enfant ne crée pas de groupe et n'y ajoute personne
 select tests.login(:LEO_U);
-select tests.refused(format('insert into public.list_shares (owner_id, member_id) values (%L, %L)', :M_LEO, :M_ONCLE),
-  'un enfant partage sa propre liste');
 select tests.refused('select public.create_group(''x'')', 'un enfant crée un groupe');
+select tests.refused(format('insert into public.group_members (group_id, member_id) values (%L, %L)', :G_FAM, :M_ONCLE),
+  'un enfant ajoute quelqu''un à un groupe');
 
 -- Événements : Noël (à venir) pour papa, maman, Léo
 select tests.login(:PAPA);
@@ -104,8 +100,21 @@ insert into public.events (name, event_date, created_by) values ('Noël', curren
 \set E_NOEL '''':noel''''
 insert into public.events (name, event_date, created_by) values ('Anniv passé', current_date - 10, :M_PAPA) returning id as passe \gset
 \set E_PASSE '''':passe''''
-insert into public.event_beneficiaries (event_id, member_id) values
-  (:E_NOEL, :M_PAPA), (:E_NOEL, :M_MAMAN), (:E_NOEL, :M_LEO), (:E_PASSE, :M_LEO);
+insert into public.event_groups (event_id, group_id) values (:E_NOEL, :G_FAM), (:E_PASSE, :G_FAM);
+
+-- L'oncle a son propre groupe et son événement ; il ne peut pas y rattacher le groupe de papa
+select tests.login(:ONCLE);
+select public.create_group('Amis') as amis \gset
+\set G_AMIS '''':amis''''
+insert into public.events (name, event_date, created_by) values ('Soirée', current_date + 5, :M_ONCLE) returning id as soiree \gset
+\set E_SOIREE '''':soiree''''
+insert into public.event_groups (event_id, group_id) values (:E_SOIREE, :G_AMIS);
+select tests.refused(format('insert into public.event_groups (event_id, group_id) values (%L, %L)', :E_SOIREE, :G_FAM),
+  'rattacher un groupe dont on n''est pas membre');
+select tests.login(:PAPA);
+select tests.refused(format('insert into public.event_groups (event_id, group_id) values (%L, %L)', :E_SOIREE, :G_FAM),
+  'rattacher un groupe à l''événement de quelqu''un d''autre');
+select tests.ok((select count(*) from public.events where id = :E_SOIREE) = 0, 'papa ne voit pas l''événement de l''oncle');
 
 -- Un enfant ne crée pas d'événement
 select tests.login(:LEO_U);
@@ -125,7 +134,9 @@ select tests.refused(format('insert into public.ideas (beneficiary_id, title, is
 select tests.refused(format('insert into public.ideas (beneficiary_id, event_id, title, created_by) values (%L, %L, ''x'', %L)', :M_PAPA, :E_PASSE, :M_PAPA),
   'idée sur un événement passé');
 select tests.refused(format('insert into public.ideas (beneficiary_id, event_id, title, created_by) values (%L, %L, ''x'', %L)', :M_MAMIE, :E_NOEL, :M_PAPA),
-  'idée pour quelqu''un sans droit');
+  'idée visible pour quelqu''un d''autre');
+select tests.refused(format('insert into public.ideas (beneficiary_id, event_id, title, created_by) values (%L, %L, ''x'', %L)', :M_PAPA, :E_SOIREE, :M_PAPA),
+  'rattacher son idée à un événement dont on ne fait pas partie');
 
 -- Mamie suggère une idée secrète pour papa ; elle ne peut pas créer d'idée visible
 select tests.login(:MAMIE);
@@ -170,9 +181,23 @@ select tests.refused(format('insert into public.contributions (idea_id, event_id
 select tests.login(:ONCLE);
 select tests.ok((select count(*) from public.ideas) = 0, 'oncle ne voit aucune idée');
 select tests.ok((select count(*) from public.contributions) = 0, 'oncle ne voit aucune participation');
-select tests.ok((select count(*) from public.events) = 0, 'oncle ne voit pas Noël');
+select tests.ok((select count(*) from public.events where id = :E_NOEL) = 0, 'oncle ne voit pas Noël');
+select tests.refused(format('insert into public.ideas (beneficiary_id, event_id, title, is_secret, created_by) values (%L, %L, ''x'', true, %L)', :M_PAPA, :E_NOEL, :M_ONCLE),
+  'oncle suggère sur un événement dont il ne fait pas partie');
 select tests.refused(format('insert into public.ideas (beneficiary_id, title, is_secret, created_by) values (%L, ''x'', true, %L)', :M_PAPA, :M_ONCLE),
-  'oncle suggère sans accès');
+  'oncle suggère hors événement');
+
+-- Un nouvel arrivant dans le groupe voit aussitôt l'événement et les idées
+reset role;
+insert into public.group_members (group_id, member_id) values (:G_FAM, :M_ONCLE);
+set role kdo_user;
+select tests.ok((select count(*) from public.events where id = :E_NOEL) = 1, 'oncle ajouté au groupe : il voit Noël');
+select tests.ok((select count(*) from public.ideas where beneficiary_id = :M_PAPA) = 2, 'oncle ajouté au groupe : il voit les idées de papa');
+select tests.ok((select sum(percent) from public.contributions where idea_id = :I_PERCEUSE) = 100, 'oncle voit que la perceuse est prise');
+reset role;
+delete from public.group_members where group_id = :G_FAM and member_id = :M_ONCLE;
+set role kdo_user;
+select tests.ok((select count(*) from public.ideas) = 0, 'oncle retiré du groupe : il ne voit plus rien');
 
 -- Un inconnu (connecté mais pas membre) ne voit rien
 select tests.login(:INCONNU);
@@ -199,7 +224,7 @@ select tests.login(:MAMIE);
 insert into public.contributions (idea_id, event_id, member_id, percent) values (:I_LEGO, :E_NOEL, :M_MAMIE, 100);
 
 select tests.login(:LEO_U);
-select tests.ok((select count(*) from public.contributions) = 0, 'Léo ne voit aucune participation');
+select tests.ok((select count(*) from public.contributions c join public.ideas i on i.id = c.idea_id where i.beneficiary_id = :M_LEO) = 0 and (select count(*) from public.contributions where idea_id = :I_LEGO) = 0, 'Léo ne voit aucune participation sur ses idées');
 
 select tests.login(:MAMAN);
 select tests.ok((select count(*) from public.contributions where idea_id = :I_LEGO) = 1, 'maman (parent) voit la participation de mamie');
@@ -244,8 +269,9 @@ select tests.refused(format('update public.members set is_child = false where id
 select tests.login(:PAPA);
 select public.emancipate_child(:M_LEO);
 select tests.login(:LEO_U);
-insert into public.list_shares (owner_id, member_id) values (:M_LEO, :M_ONCLE);
 select tests.ok((select count(*) from public.ideas where id = :I_VELO) = 0, 'après émancipation, toujours pas de vélo visible');
+
+-- Un parent peut retirer son enfant d'un groupe (test avant émancipation impossible ici : Léo est adulte)
 
 -- Réinitialisation de mot de passe par un adulte de la famille
 select tests.login(:PAPA);

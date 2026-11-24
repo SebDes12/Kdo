@@ -6,7 +6,7 @@ import { IdeaCard } from "@/components/idea-card";
 import { SubmitButton } from "@/components/client";
 import { Avatar, Empty } from "@/components/ui";
 import { formatCountdown, isActive } from "@/lib/format";
-import { CONTRIBUTIONS_SQL, EVENTS_SQL, IDEAS_SQL, ideaStatus, sortForOwner } from "@/lib/ideas";
+import { CONTRIBUTIONS_SQL, EVENTS_SQL, IDEAS_SQL, ideaStatus, memberInEvent, sortForOwner } from "@/lib/ideas";
 import { getSession } from "@/lib/session";
 import type { Contribution, EventRow, Idea } from "@/lib/types";
 
@@ -24,7 +24,7 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
     ideas: await q<Idea>(`${IDEAS_SQL} where i.beneficiary_id = $1`, [memberId]),
     events: await q<EventRow>(
       `${EVENTS_SQL}
-       where exists (select 1 from event_beneficiaries b where b.event_id = e.id and b.member_id = $1)
+       where ${memberInEvent("$1")}
           or e.id in (select event_id from ideas where beneficiary_id = $1)
        order by e.event_date`,
       [memberId],
@@ -157,7 +157,7 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
       )}
 
       <p className="mb-8 text-center text-sm text-muted">
-        {isMe && !me.is_child && <Link href="/famille#visibilite" className="font-bold text-brand-600">Qui voit ma liste ?</Link>}
+        {isMe && "Tes idées rattachées à un événement sont visibles par les membres de ses groupes (jamais par toi-même)."}
         {!isMe && (
           <Link href={`/famille/enfants/${owner.id}`} className="font-bold text-brand-600">
             Réglages de {owner.display_name} (connexion, qui voit sa liste)

@@ -13,7 +13,8 @@ export type EventRow = {
   name: string;
   event_date: string;
   created_by: string | null;
-  event_beneficiaries?: { member_id: string }[];
+  /** Groupes rattachés à l'événement. */
+  event_groups?: { group_id: string }[];
 };
 
 export type IdeaLink = { id: string; url: string; position: number };
@@ -42,9 +43,3 @@ export type Contribution = {
 
 export type Group = { id: string; name: string; created_by: string | null };
 export type GroupMember = { group_id: string; member_id: string };
-export type ListShare = {
-  id: string;
-  owner_id: string;
-  group_id: string | null;
-  member_id: string | null;
-};

@@ -21,17 +21,27 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const { tx, me, member, children, isParentOf } = await getSession();
 
-  const { events, ideas, contributions, reserve, chosen, viewable } = await tx(async (q) => ({
-    viewable: new Set(
+  const { events, ideas, contributions, reserve, chosen, myEvents, myCounts } = await tx(async (q) => ({
+    // Événements à venir dont je fais partie, et le nombre d'idées que j'y ai mises
+    myEvents: new Set(
       (
-        await q<{ member_id: string }>(
-          `select distinct b.member_id from event_beneficiaries b join events e on e.id = b.event_id
-           where e.event_date >= current_date and can_view_list(b.member_id)`,
+        await q<{ event_id: string }>(
+          `select distinct eg.event_id from event_groups eg join group_members gm on gm.group_id = eg.group_id
+           where gm.member_id = $1`,
+          [me.id],
         )
-      ).map((r) => r.member_id),
+      ).map((r) => r.event_id),
+    ),
+    myCounts: new Map(
+      (
+        await q<{ event_id: string; n: number }>(
+          "select event_id, count(*)::int as n from ideas where beneficiary_id = $1 and event_id is not null group by event_id",
+          [me.id],
+        )
+      ).map((r) => [r.event_id, r.n]),
     ),
     events: await q<EventRow>(`${EVENTS_SQL} order by e.event_date`),
-    // Idées des autres sur les événements à venir (la base ne renvoie que les listes partagées avec moi)
+    // Idées des autres sur les événements à venir (la base ne renvoie que celles des événements de mes groupes)
     ideas: await q<Idea>(
       `${IDEAS_SQL}
        where i.beneficiary_id <> $1
@@ -89,11 +99,13 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       {upcoming.map((e) => {
         const eventIdeas = ideas.filter((i) => i.event_id === e.id);
-        // Les personnes de l'événement (sauf moi) dont je vois la liste
-        const people = (e.event_beneficiaries ?? [])
-          .map((b) => member(b.member_id))
-          .filter((m): m is NonNullable<typeof m> => !!m && m.id !== me.id && viewable.has(m.id))
+        // Les personnes (sauf moi) qui ont mis une liste sur cet événement
+        const people = [...new Set(eventIdeas.map((i) => i.beneficiary_id))]
+          .map((pid) => member(pid))
+          .filter((m): m is NonNullable<typeof m> => !!m && m.id !== me.id)
           .sort((a, b) => a.display_name.localeCompare(b.display_name));
+        const mine = myCounts.get(e.id) ?? 0;
+        const myListHref = `/idees/nouvelle?pour=${me.id}&evenement=${e.id}&back=${encodeURIComponent("/")}`;
         const taken = sortForGiver(eventIdeas.filter(isTaken), contributions, me.id);
         const back = (pid: string) => `/#e${e.id.slice(0, 8)}-${pid.slice(0, 8)}`;
 
@@ -108,8 +120,17 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               </Link>
             </div>
 
+            {myEvents.has(e.id) && (
+              <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border-2 border-dashed border-line px-3 py-2 text-sm">
+                <span>
+                  📝 Ta liste ici : <strong>{mine} idée{mine > 1 ? "s" : ""}</strong>
+                </span>
+                <Link href={myListHref} className="font-bold text-brand-600 hover:underline">+ Ajouter une idée</Link>
+              </div>
+            )}
+
             {people.length === 0 && (
-              <p className="text-sm text-muted">Aucune liste à consulter pour cet événement.</p>
+              <p className="text-sm text-muted">Personne n&apos;a encore ajouté de liste à cet événement.</p>
             )}
 
             {people.map((p) => {

@@ -23,10 +23,21 @@ const NOT_ALLOWED = "Action non autorisée";
 // ---------------------------------------------------------------- Enfants
 
 export async function createChild(fd: FormData) {
-  const { q } = await getSession();
+  const { tx, me } = await getSession();
   const name = str(fd, "name");
   if (!name) redirectError("/famille", "Indique le prénom de l'enfant");
-  const [row] = await attempt("/famille", () => q<{ id: string }>("select create_child($1) as id", [name]));
+  // L'enfant rejoint d'office les groupes de son parent (modifiable ensuite).
+  const [row] = await attempt("/famille", () =>
+    tx(async (q) => {
+      const rows = await q<{ id: string }>("select create_child($1) as id", [name]);
+      await q(
+        `insert into group_members (group_id, member_id)
+         select group_id, $1 from group_members where member_id = $2 on conflict do nothing`,
+        [rows[0].id, me.id],
+      );
+      return rows;
+    }),
+  );
   revalidatePath("/", "layout");
   redirect(`/famille/enfants/${row.id}?ok=${encodeURIComponent("Enfant ajouté")}`);
 }
@@ -91,20 +102,19 @@ export async function emancipate(childId: string) {
   done("/famille", "Le compte est désormais autonome");
 }
 
-// -------------------------------------------------------------- Visibilité
+// ----------------------------------------------------- Groupes d'un enfant
 
-/** Active / désactive le partage de la liste de owner avec un groupe ou une personne. */
-export async function toggleShare(fd: FormData) {
+/** Ajoute / retire un membre (soi-même ou son enfant) d'un groupe. */
+export async function toggleGroupMember(fd: FormData) {
   const { q } = await getSession();
   const back = safePath(fd.get("back"), "/famille");
-  const owner = str(fd, "owner");
-  const column = str(fd, "kind") === "group" ? "group_id" : "member_id";
-  const target = str(fd, "target");
+  const group = str(fd, "group");
+  const memberId = str(fd, "member");
   const on = str(fd, "on") === "1";
   await attempt(back, () =>
     on
-      ? q(`insert into list_shares (owner_id, ${column}) values ($1, $2) on conflict do nothing`, [owner, target])
-      : q(`delete from list_shares where owner_id = $1 and ${column} = $2`, [owner, target]),
+      ? q("insert into group_members (group_id, member_id) values ($1, $2) on conflict do nothing", [group, memberId])
+      : q("delete from group_members where group_id = $1 and member_id = $2", [group, memberId]),
   );
   revalidatePath("/", "layout");
   redirect(back);

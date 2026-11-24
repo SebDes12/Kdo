@@ -17,17 +17,18 @@
 
 | Règle | Statut |
 |---|---|
-| Tout adulte peut créer un **groupe** (« Côté papa », « Cousins »…) et y inviter des membres. | ✅ |
-| La liste d'un **adulte** est visible des membres des groupes **qu'il choisit**. | ✅ |
-| La liste d'un **enfant** est visible des utilisateurs et/ou groupes **choisis par son parent**. | ✅ |
+| Tout adulte peut créer un **groupe** (« Côté papa », « Cousins »…) et y ajouter des membres ; une invitation peut faire rejoindre **plusieurs groupes**. | ✅ |
+| Les idées rattachées à un événement sont visibles par **tous les membres des groupes de l'événement** (sauf la personne qui les reçoit). Il n'y a pas de réglage de visibilité personne par personne. | ✅ |
+| Un **enfant** fait partie des groupes **choisis par son parent** (à sa création, il rejoint les groupes du parent). | ✅ |
 | Un parent voit toujours la liste de son enfant, réservations comprises. | ✅ |
+| Un nouveau membre d'un groupe voit aussitôt les événements de ce groupe ; un membre retiré ne les voit plus. | ✅ |
 
 ## 3. Événements
 
 | Règle | Statut |
 |---|---|
-| Un événement a un nom, une date et **N bénéficiaires** (Noël : toute la famille ; anniversaire : une seule personne). | ✅ |
-| Chaque bénéficiaire a **sa liste d'idées pour cet événement**. | ✅ |
+| Un événement a un nom, une date et est rattaché à **un ou plusieurs groupes** (choisis parmi ceux de son créateur). | ✅ |
+| Chaque membre de ces groupes peut y rattacher **sa liste d'idées** ; pour un anniversaire, seule la personne fêtée le fait en pratique (si d'autres le font, ce n'est pas gênant). | ✅ |
 | Une idée appartient à **un seul événement actif** à la fois. | ✅ |
 | Une fois la date passée, l'événement est **archivé**. Les idées non offertes peuvent être **rattachées à un nouvel événement**. | ✅ |
 | Quand une idée partiellement financée est reportée, elle **repart à 0 %** (les participations restent dans l'historique de l'ancien événement). | ✅ |
@@ -40,7 +41,7 @@
 | Champs : **titre** (obligatoire), **description**, **1 à N liens d'achat**. | ✅ |
 | Champs optionnels : prix indicatif, priorité (★), image. | ✅ |
 | Chacun peut ajouter des idées **sur sa propre liste**. | ✅ |
-| Toute personne qui voit une liste peut y **suggérer une idée**. Le **destinataire ne la voit jamais**. | ✅ |
+| Tout membre d'un événement peut **suggérer une idée** pour quelqu'un de cet événement. Le **destinataire ne la voit jamais**. | ✅ |
 | Le destinataire peut modifier ou supprimer ses idées à tout moment, **sans notification** aux acheteurs. | ✅ |
 
 ## 5. Choix et participation

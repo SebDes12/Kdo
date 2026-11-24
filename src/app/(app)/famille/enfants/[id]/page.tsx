@@ -5,8 +5,8 @@ import { addCoparent, emancipate, removeCoparent, renameMember, setChildLogin } 
 import { ConfirmButton, SubmitButton } from "@/components/client";
 import { Avatar, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
-import { loadSharing } from "../../load";
-import { ShareToggles } from "../../share-toggles";
+import { loadGroups } from "../../load";
+import { GroupToggles } from "../../group-toggles";
 
 export const metadata: Metadata = { title: "Enfant" };
 
@@ -16,13 +16,13 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
   const { me, members, parentLinks, member, isParentOf } = session;
   const child = member(id);
   if (!child || !isParentOf(id)) notFound();
-  const { groups, groupMembers, shares } = await loadSharing(session);
+  const { groups, groupMembers } = await loadGroups(session);
+  // Je ne peux gérer que les groupes dont je fais partie
+  const myGroups = groups.filter((g) => groupMembers.some((gm) => gm.group_id === g.id && gm.member_id === me.id));
 
   const back = `/famille/enfants/${id}`;
   const parents = parentLinks.filter((l) => l.child_id === id).map((l) => member(l.parent_id)!).filter(Boolean);
   const adults = members.filter((m) => !m.is_child && !parents.some((p) => p.id === m.id));
-  const parentIds = new Set(parents.map((p) => p.id));
-  const people = members.filter((m) => m.id !== id && !parentIds.has(m.id));
 
   return (
     <>
@@ -59,8 +59,12 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
         </form>
       </Section>
 
-      <Section title={`Qui voit la liste de ${child.display_name} ?`} id="visibilite" description="Les parents la voient toujours.">
-        <ShareToggles owner={child} groups={groups} groupMembers={groupMembers} shares={shares} people={people} back={back + "#visibilite"} />
+      <Section
+        title={`Groupes de ${child.display_name}`}
+        id="groupes"
+        description={`${child.display_name} voit les événements de ces groupes et peut y ajouter sa liste, visible par leurs membres.`}
+      >
+        <GroupToggles member={child} groups={myGroups} groupMembers={groupMembers} back={back + "#groupes"} />
       </Section>
 
       <Section title="Parents" description="Les parents gèrent la liste et les réglages de l'enfant.">

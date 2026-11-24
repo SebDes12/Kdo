@@ -6,8 +6,7 @@ import { createChild, createGroup, createInvitation, createResetLink, deleteInvi
 import { ConfirmButton, ResetLinkButton, ShareLink, SubmitButton } from "@/components/client";
 import { Avatar, Badge, Empty, Notice, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
-import { loadSharing } from "./load";
-import { ShareToggles } from "./share-toggles";
+import { loadGroups } from "./load";
 
 export const metadata: Metadata = { title: "Famille" };
 
@@ -17,8 +16,8 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
   const { q, me, members, children, parentLinks, member } = session;
   if (me.is_child) redirect("/");
 
-  const [{ groups, groupMembers, shares }, invRows] = await Promise.all([
-    loadSharing(session),
+  const [{ groups, groupMembers }, invRows] = await Promise.all([
+    loadGroups(session),
     q(
       `select i.token, i.expires_at, i.used_at, i.used_by,
               coalesce(array_agg(ig.group_id) filter (where ig.group_id is not null), '{}') as group_ids
@@ -32,11 +31,10 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
   const pending = invitations.filter((i) => !i.used_at && new Date(i.expires_at) > new Date());
   const used = invitations.filter((i) => i.used_at).slice(0, 5);
   const myGroups = groups.filter((g) => groupMembers.some((gm) => gm.group_id === g.id && gm.member_id === me.id));
-  const personShares = shares.filter((s) => s.owner_id === me.id && s.member_id);
 
   return (
     <>
-      <PageHeader title="Famille" subtitle="Enfants, groupes, invitations et visibilité de ta liste." />
+      <PageHeader title="Famille" subtitle="Groupes, invitations et enfants." />
 
       {sp.bienvenue && (
         <Notice tone="ok">
@@ -44,18 +42,13 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
         </Notice>
       )}
 
-      <Section title="Qui voit ma liste ?" id="visibilite" description="Les membres des groupes activés voient tes idées. Ils ne te disent jamais ce qu'ils ont choisi.">
-        <ShareToggles
-          owner={me}
-          groups={groups}
-          groupMembers={groupMembers}
-          shares={shares}
-          people={personShares.length ? personShares.map((s) => member(s.member_id)!).filter(Boolean) : undefined}
-          back="/famille#visibilite"
-        />
-      </Section>
+      <p className="mb-8 rounded-xl border-2 border-line bg-white px-4 py-3 text-sm text-ink">
+        💡 <strong>Comment ça marche :</strong> un événement est rattaché à un ou plusieurs groupes. Tous leurs membres le
+        voient et peuvent y ajouter leur liste d&apos;idées. Les idées sont visibles par les membres de ces groupes, jamais
+        par la personne qui les reçoit.
+      </p>
 
-      <Section title="Mes enfants" id="enfants" description="Tu choisis qui voit leur liste. Ils ne voient jamais ce qui a été choisi.">
+      <Section title="Mes enfants" id="enfants" description="Tu choisis les groupes de chaque enfant. Ils ne voient jamais ce qui a été choisi pour eux.">
         <div className="space-y-3">
           {children.length > 0 && (
             <ul className="card divide-y divide-line">
