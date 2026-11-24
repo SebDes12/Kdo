@@ -94,21 +94,23 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
     <>
       <header className="mb-5">
         <Link href="/" className="mb-2 inline-flex text-sm font-semibold text-muted hover:text-ink">← Accueil</Link>
-        <div className="flex items-start justify-between gap-3">
+        <div className="band flex items-start justify-between gap-3 rounded-2xl p-5 shadow-sm">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{event.name}</h1>
-            <p className="text-sm text-muted">
-              {formatDate(event.event_date)} · <span className="font-bold text-brand-600">{formatCountdown(event.event_date)}</span>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">🎁 {event.name}</h1>
+            <p className="text-sm text-band-ink/85">
+              {formatDate(event.event_date)} · <span className="font-bold text-accent">{formatCountdown(event.event_date)}</span>
             </p>
           </div>
           {event.created_by === me.id && (
-            <Link href={`/evenements/${id}/modifier`} className="btn-ghost shrink-0 text-xs">⚙️ Modifier</Link>
+            <Link href={`/evenements/${id}/modifier`} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-band-ink/85 hover:bg-white/10">
+              ⚙️ Modifier
+            </Link>
           )}
         </div>
       </header>
 
       {/* Une personne à la fois */}
-      <nav className="sticky top-14 z-20 -mx-4 mb-5 flex gap-2 overflow-x-auto border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur" aria-label="Pour qui ?">
+      <nav className="sticky top-14 z-20 -mx-4 mb-5 flex gap-2 overflow-x-auto border-b-2 border-line bg-paper px-4 py-2.5" aria-label="Pour qui ?">
         {people.map((p) => {
           const active = p.id === current.id;
           const n = viewable.get(p.id) ? freeCount(p.id) : null;
@@ -131,7 +133,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
       </nav>
 
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-extrabold">{isMe ? "Ma liste" : `Les idées de ${current.display_name}`}</h2>
+        <h2 className="section-title">{isMe ? "Ma liste" : `Les idées de ${current.display_name}`}</h2>
         {canSee && open && (
           <Link href={addHref} className="btn-secondary shrink-0 py-2 text-xs">
             {canManage ? "+ Ajouter" : "+ Suggérer une idée"}

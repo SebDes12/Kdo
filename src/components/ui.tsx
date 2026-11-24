@@ -77,8 +77,8 @@ export function Section({
     <section id={id} className="mb-10 scroll-mt-20">
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-extrabold">{title}</h2>
-          {description && <p className="text-sm text-muted">{description}</p>}
+          <h2 className="section-title">{title}</h2>
+          {description && <p className="mt-1 text-sm text-muted">{description}</p>}
         </div>
         {action}
       </div>

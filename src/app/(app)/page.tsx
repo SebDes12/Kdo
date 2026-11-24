@@ -99,11 +99,11 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
         return (
           <section key={e.id} className="mb-10">
-            <div className="sticky top-14 z-20 -mx-4 mb-4 flex items-baseline justify-between gap-3 border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur">
-              <h2 className="truncate text-lg font-extrabold">
-                {e.name} <span className="text-sm font-bold text-brand-600">· {formatCountdown(e.event_date)}</span>
+            <div className="band sticky top-14 z-20 -mx-4 mb-5 flex items-center justify-between gap-3 px-4 py-3 shadow-sm sm:mx-0 sm:rounded-2xl">
+              <h2 className="min-w-0 truncate text-lg font-extrabold">
+                🎁 {e.name} <span className="text-sm font-bold text-accent">· {formatCountdown(e.event_date)}</span>
               </h2>
-              <Link href={`/evenements/${e.id}`} className="shrink-0 text-xs font-bold text-muted hover:text-ink">
+              <Link href={`/evenements/${e.id}`} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-band-ink/85 hover:bg-white/10">
                 Détails ›
               </Link>
             </div>
@@ -122,10 +122,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               const suggestHref = `/idees/nouvelle?pour=${p.id}&evenement=${e.id}&back=${encodeURIComponent(back(p.id))}`;
               return (
                 <div key={p.id} id={back(p.id).slice(2)} className="mb-6 scroll-mt-28">
-                  <div className="mb-2 flex items-center gap-2">
+                  <div className="mb-3 flex items-center gap-2 rounded-xl bg-brand-50 px-2 py-1.5">
                     <Avatar member={p} size="sm" />
-                    <h3 className="flex-1 font-extrabold">Pour {p.display_name}</h3>
-                    <Link href={suggestHref} className="text-xs font-bold text-muted hover:text-brand-600">
+                    <h3 className="flex-1 font-extrabold text-brand-700">Pour {p.display_name}</h3>
+                    <Link href={suggestHref} className="rounded-lg px-2 py-1 text-xs font-bold text-brand-700 hover:bg-brand-100">
                       {isParentOf(p.id) ? "+ Ajouter" : "+ Suggérer"}
                     </Link>
                   </div>

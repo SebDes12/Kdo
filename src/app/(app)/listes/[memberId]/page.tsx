@@ -99,7 +99,7 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
         const list = sortForOwner(ideas.filter((i) => i.event_id === e.id));
         return (
           <section key={e.id} className="mb-8">
-            <h2 className="mb-3 flex items-baseline gap-2 text-lg font-extrabold">
+            <h2 className="section-title mb-3 flex items-baseline gap-2">
               <Link href={`/evenements/${e.id}`} className="hover:text-brand-600">{e.name}</Link>
               <span className="text-sm font-bold text-brand-600">{formatCountdown(e.event_date)}</span>
             </h2>
@@ -122,7 +122,7 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
 
       {reserve.length > 0 && (
         <section id="reserve" className="mb-8 scroll-mt-20">
-          <h2 className="text-lg font-extrabold">📦 En réserve</h2>
+          <h2 className="section-title">📦 En réserve</h2>
           <p className="mb-3 text-sm text-muted">
             {upcoming.length > 0 ? "Pas encore rattachées à un événement : ajoute-les en un clic." : "Elles attendent le prochain événement."}
           </p>

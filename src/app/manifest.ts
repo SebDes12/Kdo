@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Les idées cadeaux de la famille, sans gâcher la surprise.",
     start_url: "/",
     display: "standalone",
-    background_color: "#fafaf9",
-    theme_color: "#e11d48",
+    background_color: "#f4f4fa",
+    theme_color: "#1e1b4b",
     lang: "fr",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
