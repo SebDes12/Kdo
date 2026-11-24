@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { addCoparent, deleteChild, emancipate, removeCoparent, renameMember, setChildLogin } from "@/app/actions/family";
-import { ConfirmButton, SubmitButton } from "@/components/client";
+import { addCoparent, createChildLoginLink, deleteChild, emancipate, removeCoparent, renameMember, setChildLogin } from "@/app/actions/family";
+import { ConfirmButton, LinkButton, SubmitButton } from "@/components/client";
 import { Avatar, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
 import { loadGroups } from "../../load";
@@ -43,8 +43,24 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
       <Section
         title="Connexion"
         id="connexion"
-        description="Facultatif : un pseudo et un mot de passe permettent à l'enfant d'écrire sa liste lui-même."
+        description="Facultatif : pour que l'enfant écrive sa liste lui-même."
       >
+        <div className="card mb-3 p-4">
+          <p className="mb-2 text-sm">
+            <strong>Le plus simple :</strong> envoie-lui un lien. En l&apos;ouvrant, {child.display_name} choisit son mot de
+            passe{child.login ? "" : " (et son pseudo)"} et se retrouve connecté.
+          </p>
+          <LinkButton
+            label={`🔗 Envoyer un lien de connexion à ${child.display_name}`}
+            className="btn-primary"
+            title={`Lien de connexion pour ${child.display_name}`}
+            message="Le lien sert une seule fois et reste valable 7 jours. Un nouveau lien annule le précédent."
+            confirmLabel="Créer le lien"
+            shareText={`Envoie ce lien à ${child.display_name} (WhatsApp, SMS…) :`}
+            action={createChildLoginLink.bind(null, id)}
+          />
+        </div>
+        <p className="mb-2 text-sm text-muted">Ou crée-lui toi-même son identifiant :</p>
         <form action={setChildLogin.bind(null, id)} className="card grid gap-3 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <div>
             <label className="label" htmlFor="login">Pseudo</label>

@@ -44,7 +44,7 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.waitForURL(/enfants/);
   const leoId = papa.url().match(/enfants\/([0-9a-f-]{36})/)[1];
   await papa.fill("#login", "leo"); await papa.fill("#password", "secret1");
-  await papa.click("button:has-text('Créer')");
+  await papa.locator('form:has(#login) button[type=submit]').click();
   await papa.waitForURL(/ok=/);
   ok(await papa.locator('#groupes [role="switch"][aria-checked="true"]').count() === 2, "Léo a rejoint les groupes de papa");
   await shot(papa, "enfant");
@@ -234,6 +234,28 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.waitForURL(/enfants/);
   await maman.goto(BASE + "/famille");
   ok(await maman.locator("#enfants li", { hasText: "Emma" }).count() === 1, "Emma créée avec ses deux parents");
+  // Lien de connexion pour Emma : elle choisit son mot de passe et se retrouve connectée
+  await papa.getByRole("button", { name: /Envoyer un lien de connexion/ }).click();
+  await papa.locator("dialog[open] [data-confirm]").click();
+  await papa.waitForSelector("#connexion input[readonly]");
+  const emmaLink = await papa.locator("#connexion input[readonly]").inputValue();
+  ok(emmaLink.includes("/activer/"), "lien de connexion créé pour Emma");
+  const emmaCtx = await ctx(); const emma = await emmaCtx.newPage();
+  await emma.goto(emmaLink);
+  await shot(emma, "activation-emma");
+  ok(await emma.inputValue("#login") === "emma", "pseudo proposé à partir du prénom");
+  await emma.fill("#password", "licorne1");
+  await emma.click("text=C'est parti !");
+  await emma.waitForURL(/bienvenue=1/);
+  ok(await emma.locator("h1", { hasText: "Emma" }).count() === 1, "Emma est connectée");
+  await emma.goto(emmaLink);
+  ok(await emma.locator("text=Lien expiré").count() === 1, "le lien ne sert qu'une fois");
+  const emma2 = await (await ctx()).newPage();
+  await emma2.goto(BASE + "/connexion");
+  await emma2.fill("#identifiant", "emma"); await emma2.fill("#password", "licorne1");
+  await emma2.click("text=Se connecter");
+  await emma2.waitForURL(BASE + "/");
+  ok(true, "Emma se reconnecte avec son pseudo");
 
   // 11. Papa crée un lien « mot de passe » pour Julie, qui le change
   await papa.goto(BASE + "/famille#membres");

@@ -120,6 +120,42 @@ export async function acceptInvitation(token: string, fd: FormData) {
   redirect("/?bienvenue=1");
 }
 
+/** Un enfant active son compte via le lien envoyé par son parent. */
+export async function activateChild(token: string, fd: FormData) {
+  const back = `/activer/${encodeURIComponent(token)}`;
+  const wanted = str(fd, "login").toLowerCase();
+  const password = String(fd.get("password") ?? "");
+  if (password.length < 6) redirectError(back, "Le mot de passe doit faire au moins 6 caractères");
+  const hash = await hashPassword(password);
+  await run(back, () =>
+    asAdmin(async (q) => {
+      const [link] = await q<{ member_id: string; login: string | null }>(
+        `update login_links l set used_at = now()
+         from members m
+         where l.token_hash = $1 and l.used_at is null and l.expires_at > now()
+           and m.id = l.member_id and m.is_child
+         returning l.member_id, m.login`,
+        [sha256(token)],
+      );
+      if (!link) throw new UserError("Ce lien n'est plus valable : demande-en un nouveau à ton parent");
+      if (link.login) {
+        await q("update accounts set password_hash = $2 where member_id = $1", [link.member_id, hash]);
+      } else {
+        if (!/^[a-z0-9][a-z0-9._-]{1,30}$/.test(wanted)) {
+          throw new UserError("Pseudo invalide : lettres minuscules, chiffres, . _ - (2 à 31 caractères)");
+        }
+        const [taken] = await q("select 1 from members where login = $1", [wanted]);
+        if (taken) throw new UserError("Ce pseudo est déjà pris, choisis-en un autre");
+        await q("update members set login = $2 where id = $1", [link.member_id, wanted]);
+        await q("insert into accounts (member_id, password_hash) values ($1, $2)", [link.member_id, hash]);
+      }
+      await q("delete from sessions where member_id = $1", [link.member_id]);
+      await startSession(q, link.member_id);
+    }),
+  );
+  redirect("/?bienvenue=1");
+}
+
 /** Nouveau mot de passe via un lien généré par un adulte de la famille. */
 export async function resetPassword(token: string, fd: FormData) {
   const back = `/reinitialiser/${encodeURIComponent(token)}`;
