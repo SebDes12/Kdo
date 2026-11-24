@@ -40,6 +40,7 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.fill('input[placeholder="Prénom de l\'enfant"]', "Léo");
   await papa.click("text=+ Ajouter un enfant");
   await papa.waitForURL(/enfants/);
+  const leoId = papa.url().match(/enfants\/([0-9a-f-]{36})/)[1];
   await papa.fill("#login", "leo"); await papa.fill("#password", "secret1");
   await papa.click("button:has-text('Créer')");
   await papa.waitForURL(/ok=/);
@@ -60,6 +61,27 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await maman.locator("#visibilite form").first().locator("button").click();
   await maman.waitForLoadState("networkidle");
 
+  // Onglet d'une personne sur la page de l'événement
+  const tab = async (page, name) => {
+    await page.locator('nav[aria-label="Pour qui ?"] a', { hasText: name }).click();
+    await page.waitForURL(/pour=/);
+  };
+  const addIdea = async (page, title, extra) => {
+    await page.locator('a:visible:text-is("+ Ajouter une idée")').first().click();
+    await page.fill("#title", title);
+    if (extra) await extra(page);
+    await page.click("text=Ajouter l'idée");
+    await page.waitForURL(/ok=/);
+  };
+
+  // 4 bis. Papa crée une idée pour Léo AVANT l'événement (elle part en réserve)
+  await papa.goto(BASE + "/");
+  await papa.locator("a", { hasText: "Nos listes" }).click();
+  await papa.locator('nav[aria-label="Choisir la liste"] a', { hasText: "Léo" }).click();
+  await papa.waitForURL(new RegExp("/listes/" + leoId));
+  await addIdea(papa, "Livre de dinosaures");
+  ok(await papa.locator("#reserve", { hasText: "Livre de dinosaures" }).count() === 1, "idée sans événement rangée en réserve");
+
   // 5. Événement
   await papa.goto(BASE + "/evenements/nouveau");
   await papa.fill("#name", "Noël 2026"); await papa.fill("#date", date);
@@ -68,45 +90,50 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await papa.click("text=Créer l'événement");
   await papa.waitForURL(/evenements\/[0-9a-f-]{36}$/);
   const eventUrl = papa.url();
+  // L'idée en réserve est signalée sur l'événement et s'y ajoute en un clic
+  await tab(papa, "Léo");
+  await papa.locator("text=en réserve pour Léo").click();
+  await papa.waitForURL(/listes/);
+  await papa.locator("article", { hasText: "Livre de dinosaures" }).locator("text=Ajouter à Noël 2026").click();
+  await papa.waitForURL(/ok=/);
+  await papa.goto(eventUrl); await tab(papa, "Léo");
+  ok(await papa.locator("article", { hasText: "Livre de dinosaures" }).count() === 1, "idée reportée sur l'événement");
+  await shot(papa, "evenement-apres-report");
 
-  // 6. Papa ajoute une idée
+  // 6. Papa ajoute ses idées
   await papa.goto(BASE + "/");
   await papa.locator("a:visible", { hasText: "Ma liste" }).first().click();
-  await papa.locator('a:visible:text-is("+ Ajouter")').first().click();
-  await papa.fill("#title", "Perceuse sans fil");
-  await papa.fill('input[name="links"]', "www.example.com/perceuse");
-  await papa.fill("#price", "89,90");
-  await papa.selectOption("#priority", "2");
-  await shot(papa, "nouvelle-idee");
-  await papa.click("text=Ajouter l'idée");
-  await papa.waitForURL(/listes/);
-  await papa.locator('a:visible:text-is("+ Ajouter")').first().click();
-  await papa.fill("#title", "Casque audio"); await papa.click("text=Ajouter l'idée"); await papa.waitForURL(/listes/);
+  await addIdea(papa, "Perceuse sans fil", async (p) => {
+    await p.fill('input[name="links"]', "www.example.com/perceuse");
+    await p.fill("#price", "89,90");
+    await p.selectOption("#priority", "2");
+    await shot(p, "nouvelle-idee");
+  });
+  await addIdea(papa, "Casque audio");
   await shot(papa, "ma-liste");
 
-  // 7. Maman prend la perceuse et suggère un livre secret
-  await maman.goto(eventUrl);
+  // 7. Maman prend la perceuse, participe au casque et suggère un livre secret
+  await maman.goto(eventUrl); await tab(maman, "Seb");
   await maman.locator("article", { hasText: "Perceuse" }).locator("text=Je le prends").click();
   await maman.waitForLoadState("networkidle");
   await maman.locator("article", { hasText: "Casque" }).locator("summary").click();
-  await maman.locator("article", { hasText: "Casque" }).locator('input[type=number]').fill("40");
+  await maman.locator("article", { hasText: "Casque" }).locator("input[type=number]").fill("40");
   await maman.locator("article", { hasText: "Casque" }).locator("text=OK").click();
   await maman.waitForLoadState("networkidle");
-  await maman.locator("section", { hasText: "Pour Seb" }).locator(`a:has-text("+ Suggérer")`).click();
+  await maman.locator('a:has-text("+ Suggérer une idée")').first().click();
   await maman.fill("#title", "Livre surprise");
   await shot(maman, "suggestion");
   await maman.click("text=Suggérer l'idée");
-  await maman.waitForURL(/evenements/);
-  await maman.goto(eventUrl);
+  await maman.waitForURL(/ok=/);
   await shot(maman, "evenement-maman");
-  ok(await maman.locator("text=Livre surprise").count() === 1, "maman voit sa suggestion");
+  ok(await maman.locator("article", { hasText: "Livre surprise" }).count() === 1, "maman voit sa suggestion");
 
-  // 8. Papa ne voit rien
-  await papa.goto(eventUrl);
+  // 8. Papa ne voit rien sur sa propre liste
+  await papa.goto(eventUrl); await tab(papa, "Moi");
   await shot(papa, "evenement-papa");
+  ok(await papa.locator("article", { hasText: "Perceuse" }).count() === 1, "papa voit sa perceuse");
   ok(await papa.locator("text=Livre surprise").count() === 0, "papa ne voit pas la suggestion secrète");
-  ok(await papa.locator("text=Tu offres").count() === 0 && await papa.locator("text=Déjà choisi").count() === 0, "papa ne voit aucun état choisi");
-  ok(await papa.locator("text=Julie : 40").count() === 0, "papa ne voit pas la participation");
+  ok(await papa.locator("article").filter({ hasText: /Tu offres|Choisi par|% pris|Tu participes/ }).count() === 0, "papa ne voit aucun état choisi");
 
   // 9. Léo
   const leoCtx = await ctx(); const leo = await leoCtx.newPage();
@@ -117,24 +144,29 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await leo.waitForURL(BASE + "/");
   await shot(leo, "accueil-leo");
   await leo.locator("a:visible", { hasText: "Ma liste" }).first().click();
-  await leo.locator('a:visible:text-is("+ Ajouter")').first().click();
-  await leo.fill("#title", "Doudou licorne"); await leo.click("text=Ajouter l'idée"); await leo.waitForURL(/listes/);
+  await addIdea(leo, "Doudou licorne");
 
-  await maman.goto(eventUrl);
+  await maman.goto(eventUrl); await tab(maman, "Léo");
   await maman.locator("article", { hasText: "Doudou" }).locator("text=Je le prends").click();
   await maman.waitForLoadState("networkidle");
-  await leo.goto(eventUrl);
+  await leo.goto(eventUrl); await tab(leo, "Moi");
   await shot(leo, "evenement-leo");
-  ok(await leo.locator("text=Déjà choisi").count() === 0 && await leo.locator("text=Tu offres").count() === 0, "Léo ne voit pas que le doudou est pris");
+  ok(await leo.locator("article", { hasText: "Doudou" }).count() === 1, "Léo voit son doudou");
+  ok(await leo.locator("article").filter({ hasText: /Tu offres|Choisi par|% pris|Tu participes/ }).count() === 0, "Léo ne voit pas que le doudou est pris");
 
   // 10. Papa (parent) voit le choix sur la liste de Léo ; mes cadeaux de maman
-  await papa.goto(eventUrl);
-  ok(await papa.locator("article", { hasText: "Doudou" }).locator("text=Déjà choisi").count() === 1, "papa voit que le doudou est pris");
+  await papa.goto(eventUrl); await tab(papa, "Léo");
+  ok(await papa.locator("details", { hasText: "Déjà choisies" }).locator("article", { hasText: "Doudou" }).count() === 1, "papa voit que le doudou est pris");
+  await papa.goto(BASE + "/listes/" + leoId);
+  ok(await papa.locator("article", { hasText: "Doudou" }).locator("text=Choisi par Julie").count() === 1, "la liste de Léo indique qui a choisi");
+  await shot(papa, "liste-leo");
   await maman.goto(BASE + "/mes-cadeaux");
   await shot(maman, "mes-cadeaux");
   ok(await maman.locator("text=Perceuse sans fil").count() === 1, "mes cadeaux liste la perceuse");
   await maman.goto(BASE + "/");
   await shot(maman, "accueil-maman");
+  await papa.goto(BASE + "/");
+  await shot(papa, "accueil-papa");
 
   // 11. Papa crée un lien « mot de passe » pour Julie, qui le change
   await papa.goto(BASE + "/famille#membres");

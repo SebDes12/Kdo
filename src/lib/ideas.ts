@@ -16,6 +16,13 @@ export const EVENTS_SQL = `
                    from event_beneficiaries b where b.event_id = e.id), '[]') as event_beneficiaries
   from events e`;
 
+/** Nombre d'idées « en réserve » (sans événement ou d'un événement passé) par bénéficiaire. */
+export const RESERVE_COUNTS_SQL = `
+  select i.beneficiary_id, count(*)::int as n
+  from ideas i left join events e on e.id = i.event_id
+  where i.beneficiary_id = any($1::uuid[]) and (i.event_id is null or e.event_date < current_date)
+  group by i.beneficiary_id`;
+
 export const CONTRIBUTIONS_SQL = "select idea_id, event_id, member_id, percent from contributions";
 
 export type IdeaStatus = {
