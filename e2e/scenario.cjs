@@ -206,6 +206,10 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   ok(await mamie.locator("h2", { hasText: "Noël 2026" }).count() === 1, "nouvelle arrivante : elle voit Noël");
   ok(await mamie.locator("article", { hasText: "Casque audio" }).count() === 1, "nouvelle arrivante : elle voit les idées de Seb");
   ok(await mamie.locator("text=Ta liste ici").count() === 1, "nouvelle arrivante : elle peut ajouter sa liste");
+  await mamie.locator("a", { hasText: "Ta liste ici" }).click();
+  await mamie.waitForURL(/evenements\/.*pour=/);
+  ok(await mamie.locator("h2", { hasText: "Ma liste" }).count() === 1, "« Ta liste ici » mène à sa liste de l'événement");
+  await mamie.goto(BASE + "/");
   await shot(mamie, "accueil-mamie");
 
   // 11. Papa crée un lien « mot de passe » pour Julie, qui le change

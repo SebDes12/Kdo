@@ -124,11 +124,20 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             </div>
 
             {myEvents.has(e.id) && (
-              <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border-2 border-dashed border-line px-3 py-2 text-sm">
-                <span>
+              <div className="mb-5 flex items-stretch overflow-hidden rounded-xl border-2 border-dashed border-line text-sm">
+                <Link
+                  href={`/evenements/${e.id}?pour=${me.id}`}
+                  className="flex flex-1 items-center gap-1 px-3 py-2 hover:bg-brand-50"
+                >
                   📝 Ta liste ici : <strong>{mine} idée{mine > 1 ? "s" : ""}</strong>
-                </span>
-                <Link href={myListHref} className="font-bold text-brand-600 hover:underline">+ Ajouter une idée</Link>
+                  <span className="ml-1 text-muted">›</span>
+                </Link>
+                <Link
+                  href={myListHref}
+                  className="flex items-center border-l-2 border-dashed border-line px-3 py-2 font-bold text-brand-600 hover:bg-brand-50"
+                >
+                  + Ajouter
+                </Link>
               </div>
             )}
 
@@ -145,16 +154,25 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               const hasList = eventIdeas.some((i) => i.beneficiary_id === p.id);
               const suggestHref = `/idees/nouvelle?pour=${p.id}&evenement=${e.id}&back=${encodeURIComponent(back(p.id))}`;
               return (
-                <div key={p.id} id={back(p.id).slice(2)} className="mb-6 scroll-mt-28">
-                  <div className="mb-3 flex items-center gap-2 rounded-xl bg-brand-50 px-2 py-1.5">
-                    <Avatar member={p} size="sm" />
-                    <h3 className="flex-1 font-extrabold text-brand-700">Pour {p.display_name}</h3>
-                    <Link href={suggestHref} className="rounded-lg px-2 py-1 text-xs font-bold text-brand-700 hover:bg-brand-100">
+                <div
+                  key={p.id}
+                  id={back(p.id).slice(2)}
+                  className="mb-8 scroll-mt-28 overflow-hidden rounded-2xl border-2 border-line bg-white shadow-md"
+                >
+                  <div className="flex items-center gap-2 border-b-2 border-brand-100 bg-brand-50 px-3 py-2.5">
+                    <Avatar member={p} />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-lg font-extrabold text-brand-700">Pour {p.display_name}</h3>
+                      <p className="text-xs font-semibold text-muted">
+                        {list.length} idée{list.length > 1 ? "s" : ""} à choisir
+                      </p>
+                    </div>
+                    <Link href={suggestHref} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-brand-700 hover:bg-brand-100">
                       {isParentOf(p.id) ? "+ Ajouter" : "+ Suggérer"}
                     </Link>
                   </div>
                   {list.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="divide-y-2 divide-line">
                       {list.map((idea) => (
                         <IdeaCard
                           key={idea.id}
@@ -165,11 +183,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                           canEdit={idea.is_secret && idea.created_by === me.id && !isParentOf(p.id)}
                           back={back(p.id)}
                           member={member}
+                          variant="row"
                         />
                       ))}
                     </div>
                   ) : (
-                    <p className="rounded-xl border border-dashed border-line px-4 py-3 text-sm text-muted">
+                    <p className="px-4 py-4 text-sm text-muted">
                       {hasList ? "🎉 Tout est déjà choisi." : "Pas encore d'idée."}
                     </p>
                   )}
