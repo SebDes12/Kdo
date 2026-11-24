@@ -59,6 +59,7 @@ export default async function GroupPage({ params }: PageProps<"/famille/groupes/
                   <form action={removeGroupMember.bind(null, id, mid)}>
                     <ConfirmButton
                       message={mid === me.id ? "Quitter ce groupe ?" : `Retirer ${m?.display_name} du groupe ?`}
+                      confirmLabel={mid === me.id ? "Quitter" : "Retirer"}
                       className="btn-ghost py-1 text-xs"
                     >
                       {mid === me.id ? "Quitter" : "Retirer"}
@@ -98,7 +99,13 @@ export default async function GroupPage({ params }: PageProps<"/famille/groupes/
 
       {isCreator && (
         <form action={deleteGroup.bind(null, id)} className="border-t border-line pt-6">
-          <ConfirmButton message="Supprimer ce groupe ? Les listes partagées avec lui ne le seront plus.">Supprimer le groupe</ConfirmButton>
+          <ConfirmButton
+            title="Supprimer ce groupe ?"
+            message="Ses membres ne verront plus les événements rattachés uniquement à ce groupe."
+            confirmLabel="Supprimer"
+          >
+            Supprimer le groupe
+          </ConfirmButton>
         </form>
       )}
     </>

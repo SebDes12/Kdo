@@ -176,8 +176,8 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   // 10 ter. Papa supprime la perceuse que Julie a choisie : elle est prévenue et garde son choix
   await papa.goto(BASE + "/");
   await papa.locator("nav a:visible", { hasText: "Ma liste" }).first().click();
-  papa.once("dialog", (d) => d.accept());
   await papa.locator("article", { hasText: "Perceuse" }).getByLabel(/Supprimer/).click();
+  await papa.locator("dialog[open] [data-confirm]").click();
   await papa.waitForURL(/ok=/);
   ok(await papa.locator("article", { hasText: "Perceuse" }).count() === 0, "papa ne voit plus la perceuse supprimée");
   await maman.goto(BASE + "/");
@@ -187,8 +187,8 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await maman.waitForURL(/j-offre/);
   ok(await maman.locator("li", { hasText: "Perceuse" }).locator("text=l'a retirée de sa liste").count() === 1, "J'offre : avertissement sur la perceuse");
   await shot(maman, "j-offre-avertissement");
-  maman.once("dialog", (d) => d.accept());
   await maman.locator("li", { hasText: "Perceuse" }).locator("text=Annuler mon choix").click();
+  await maman.locator("dialog[open] [data-confirm]").click();
   await maman.waitForURL(/ok=/);
   ok(await maman.locator("li", { hasText: "Perceuse" }).count() === 0, "Julie a annulé son choix");
 
@@ -217,8 +217,8 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await maman.fill('input[placeholder="Prénom de l\'enfant"]', "Léo");
   await maman.click("text=+ Ajouter un enfant");
   await maman.waitForURL(/enfants/);
-  maman.once("dialog", (d) => d.accept());
   await maman.locator("text=🗑 Supprimer Léo").click();
+  await maman.locator("dialog[open] [data-confirm]").click();
   await maman.waitForURL(/famille\?ok=/);
   ok(await maman.locator("#enfants li").count() === 0, "Julie a supprimé le doublon de Léo");
   await papa.goto(BASE + "/famille/enfants/" + leoId);
@@ -237,8 +237,8 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
 
   // 11. Papa crée un lien « mot de passe » pour Julie, qui le change
   await papa.goto(BASE + "/famille#membres");
-  papa.once("dialog", (d) => d.accept());
-  await papa.locator("li", { hasText: "Julie" }).locator("text=Mot de passe").click();
+  await papa.locator("li", { hasText: "Julie" }).getByRole("button", { name: "🔑 Mot de passe" }).click();
+  await papa.locator("dialog[open] [data-confirm]").click();
   await papa.waitForSelector("#membres input[readonly]");
   const resetLink = await papa.inputValue("#membres input[readonly]");
   ok(resetLink.includes("/reinitialiser/"), "lien de réinitialisation créé");

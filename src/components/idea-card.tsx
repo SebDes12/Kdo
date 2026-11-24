@@ -101,7 +101,12 @@ function EditButtons({ idea, back }: { idea: Idea; back: string }) {
         ✏️
       </Link>
       <form action={deleteIdea.bind(null, idea.id, back)}>
-        <ConfirmButton message={`Supprimer « ${idea.title} » ?`} className="rounded-lg p-1.5 text-muted hover:bg-stone-100">
+        <ConfirmButton
+          title={`Supprimer « ${idea.title} » ?`}
+          message="Elle disparaîtra de la liste. Si quelqu'un l'avait déjà choisie, il garde son choix et sera prévenu."
+          confirmLabel="Supprimer"
+          className="rounded-lg p-1.5 text-muted hover:bg-stone-100"
+        >
           <span aria-label={`Supprimer « ${idea.title} »`}>🗑</span>
         </ConfirmButton>
       </form>
@@ -187,7 +192,14 @@ function GiverBar({
             )}
             <form action={withdraw}>
               {hidden}
-              <ConfirmButton message="Annuler ta participation ?" className="btn-ghost px-2 py-1 text-xs">
+              <ConfirmButton
+                title="Annuler ton choix ?"
+                message="L'idée redeviendra disponible pour les autres."
+                confirmLabel="Oui, annuler"
+                icon="↩️"
+                cancelLabel="Garder"
+                className="btn-ghost px-2 py-1 text-xs"
+              >
                 Annuler
               </ConfirmButton>
             </form>

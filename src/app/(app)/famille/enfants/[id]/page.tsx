@@ -75,7 +75,14 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
               <span className="flex-1 font-bold">{p.display_name}{p.id === me.id && " (moi)"}</span>
               {parents.length > 1 && (
                 <form action={removeCoparent.bind(null, id, p.id)}>
-                  <ConfirmButton message={`Retirer ${p.display_name} des parents ?`} className="btn-ghost py-1 text-xs">Retirer</ConfirmButton>
+                  <ConfirmButton
+                    title={`Retirer ${p.display_name} des parents ?`}
+                    message="Il ne pourra plus gérer la liste ni les réglages de l'enfant."
+                    confirmLabel="Retirer"
+                    className="btn-ghost py-1 text-xs"
+                  >
+                    Retirer
+                  </ConfirmButton>
                 </form>
               )}
             </li>
@@ -94,7 +101,11 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
       <Section title="Émanciper" description={`${child.display_name} devient autonome : il gère seul sa liste et sa visibilité. Les parents perdent l'accès aux réglages.`}>
         {child.login ? (
           <form action={emancipate.bind(null, id)}>
-            <ConfirmButton message={`Rendre le compte de ${child.display_name} autonome ? C'est définitif.`}>
+            <ConfirmButton
+              title={`Rendre ${child.display_name} autonome ?`}
+              message="C'est définitif : les parents ne pourront plus gérer sa liste ni ses réglages."
+              confirmLabel="Rendre autonome"
+            >
               Rendre le compte autonome
             </ConfirmButton>
           </form>
@@ -108,7 +119,11 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
         description="Par exemple s'il a été ajouté deux fois. Ses idées, ses choix et son identifiant disparaissent aussi."
       >
         <form action={deleteChild.bind(null, id)}>
-          <ConfirmButton message={`Supprimer définitivement ${child.display_name} et toutes ses idées ?`}>
+          <ConfirmButton
+            title={`Supprimer ${child.display_name} ?`}
+            message="Ses idées, ses choix et son identifiant de connexion seront supprimés définitivement."
+            confirmLabel="Supprimer"
+          >
             🗑 Supprimer {child.display_name}
           </ConfirmButton>
         </form>

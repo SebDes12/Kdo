@@ -29,7 +29,11 @@ export default async function EditEventPage({ params }: PageProps<"/evenements/[
         submitLabel="Enregistrer"
       />
       <form action={deleteEvent.bind(null, id)} className="mt-8 border-t border-line pt-6">
-        <ConfirmButton message="Supprimer cet événement ? Les idées seront conservées (en réserve), les choix seront perdus.">
+        <ConfirmButton
+          title="Supprimer cet événement ?"
+          message="Les idées sont conservées (en réserve) mais les choix déjà faits sont perdus."
+          confirmLabel="Supprimer"
+        >
           Supprimer l&apos;événement
         </ConfirmButton>
       </form>

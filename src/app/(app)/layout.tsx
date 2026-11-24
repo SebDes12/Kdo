@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="min-h-dvh pb-24 sm:pb-10">
+    <div className="pb-24 sm:pb-10">
       <Suspense>
         <Flash />
       </Suspense>

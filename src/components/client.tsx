@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 export function SubmitButton({
@@ -19,28 +19,105 @@ export function SubmitButton({
   );
 }
 
-/** Bouton qui demande confirmation avant d'envoyer le formulaire. */
+/**
+ * Bouton qui demande confirmation dans une fenêtre Kdo avant d'envoyer
+ * le formulaire qui le contient.
+ */
 export function ConfirmButton({
   children,
   message,
+  title,
+  confirmLabel = "Confirmer",
+  cancelLabel = "Revenir",
+  danger = true,
+  icon,
   className = "btn-danger",
 }: {
   children: React.ReactNode;
+  /** Texte d'explication (ou la question si aucun titre n'est donné). */
   message: string;
+  title?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  /** Action destructrice (bouton rouge) ou simple confirmation. */
+  danger?: boolean;
+  /** Pictogramme de la fenêtre (🗑 par défaut pour une suppression). */
+  icon?: string;
   className?: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
+    <ConfirmDialog
+      triggerLabel={children}
+      triggerClassName={className}
       disabled={pending}
-      className={className}
-      onClick={(e) => {
-        if (!window.confirm(message)) e.preventDefault();
-      }}
-    >
-      {children}
-    </button>
+      title={title ?? message}
+      message={title ? message : undefined}
+      confirm={
+        <button type="submit" data-confirm className={danger ? "btn bg-red-600 text-white hover:bg-red-700" : "btn-primary"}>
+          {confirmLabel}
+        </button>
+      }
+      cancelLabel={cancelLabel}
+      danger={danger}
+      icon={icon}
+    />
+  );
+}
+
+/** Fenêtre de confirmation (élément <dialog> natif, accessible au clavier). */
+function ConfirmDialog({
+  triggerLabel,
+  triggerClassName,
+  disabled,
+  title,
+  message,
+  confirm,
+  cancelLabel,
+  danger,
+  icon,
+}: {
+  triggerLabel: React.ReactNode;
+  triggerClassName: string;
+  disabled?: boolean;
+  title: string;
+  message?: string;
+  confirm: React.ReactNode;
+  cancelLabel: string;
+  danger: boolean;
+  icon?: string;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const open = () => ref.current?.showModal();
+  const close = () => ref.current?.close();
+  const onBackdrop = (e: React.MouseEvent<HTMLDialogElement>) => {
+    if (e.target === e.currentTarget) close();
+  };
+  return (
+    <>
+      <button type="button" disabled={disabled} className={triggerClassName} onClick={open}>
+        {triggerLabel}
+      </button>
+      <dialog
+        ref={ref}
+        onClick={onBackdrop}
+        className="m-auto w-[min(92vw,24rem)] rounded-3xl border-0 bg-white p-0 text-ink shadow-2xl backdrop:bg-band/60 backdrop:backdrop-blur-sm open:animate-[kdo-pop_.15s_ease-out]"
+      >
+        <div className="p-6 text-center">
+          <div className={`mx-auto mb-3 flex size-14 items-center justify-center rounded-full text-2xl ${danger ? "bg-red-100" : "bg-brand-50"}`}>
+            {icon ?? (danger ? "🗑" : "🎁")}
+          </div>
+          <h2 className="text-lg font-extrabold">{title}</h2>
+          {message && <p className="mt-2 text-sm text-muted">{message}</p>}
+          <div className="mt-6 grid grid-cols-2 gap-2" onClick={(e) => (e.target as HTMLElement).closest("[data-confirm]") && close()}>
+            <button type="button" className="btn-secondary" onClick={close} autoFocus>
+              {cancelLabel}
+            </button>
+            {confirm}
+          </div>
+        </div>
+      </dialog>
+    </>
   );
 }
 
@@ -202,16 +279,20 @@ export function ResetLinkButton({
     <div className="w-full">
       {!state.link && (
         <form action={run}>
-          <button
-            type="submit"
+          <ConfirmDialog
+            triggerLabel="🔑 Mot de passe"
+            triggerClassName="btn-ghost py-1 text-xs"
             disabled={pending}
-            className="btn-ghost py-1 text-xs"
-            onClick={(e) => {
-              if (!window.confirm(`Créer un lien pour que ${name} choisisse un nouveau mot de passe ?`)) e.preventDefault();
-            }}
-          >
-            🔑 Mot de passe
-          </button>
+            title={`Nouveau mot de passe pour ${name} ?`}
+            message={`Tu vas obtenir un lien à lui envoyer (valable 2 jours). Son mot de passe actuel restera valable jusqu'à ce qu'il en choisisse un nouveau.`}
+            confirm={
+              <button type="submit" data-confirm className="btn-primary">
+                Créer le lien
+              </button>
+            }
+            cancelLabel="Revenir"
+            danger={false}
+          />
         </form>
       )}
       {state.error && <p className="mt-1 text-xs font-bold text-red-700">{state.error}</p>}
