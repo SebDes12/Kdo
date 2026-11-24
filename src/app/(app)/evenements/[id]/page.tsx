@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { IdeaCard } from "@/components/idea-card";
 import { Avatar, Badge, Empty, PageHeader } from "@/components/ui";
-import { formatCountdown, formatDate, isActive } from "@/lib/format";
-import { IDEA_SELECT, ideaStatus, sortForGiver, sortForOwner } from "@/lib/ideas";
+import { formatCountdown, formatDate, isActive, isUuid } from "@/lib/format";
+import { CONTRIBUTIONS_SQL, EVENTS_SQL, IDEAS_SQL, ideaStatus, sortForGiver, sortForOwner } from "@/lib/ideas";
 import { getSession } from "@/lib/session";
 import type { Contribution, EventRow, Idea } from "@/lib/types";
 
@@ -12,30 +12,28 @@ export const metadata: Metadata = { title: "Événement" };
 
 export default async function EventPage({ params }: PageProps<"/evenements/[id]">) {
   const { id } = await params;
-  const { supabase, me, member, isParentOf } = await getSession();
+  const { tx, me, member, isParentOf } = await getSession();
+  if (!isUuid(id)) notFound();
 
-  const { data: ev } = await supabase
-    .from("events")
-    .select("id, name, event_date, created_by, event_beneficiaries(member_id)")
-    .eq("id", id)
-    .maybeSingle();
-  if (!ev) notFound();
-  const event = ev as EventRow;
+  const data = await tx(async (q) => {
+    const [event] = await q<EventRow>(`${EVENTS_SQL} where e.id = $1`, [id]);
+    if (!event) return null;
+    return {
+      event,
+      ideas: await q<Idea>(`${IDEAS_SQL} where i.event_id = $1`, [id]),
+      contributions: await q<Contribution>(`${CONTRIBUTIONS_SQL} where event_id = $1`, [id]),
+      // Listes visibles : la base le dit pour chaque bénéficiaire
+      viewable: new Map(
+        (await q<{ member_id: string; ok: boolean }>(
+          "select member_id, can_view_list(member_id) as ok from event_beneficiaries where event_id = $1",
+          [id],
+        )).map((r) => [r.member_id, r.ok]),
+      ),
+    };
+  });
+  if (!data) notFound();
+  const { event, ideas, contributions, viewable } = data;
   const open = isActive(event.event_date);
-
-  const [{ data: ideaRows }, { data: contribRows }, { data: viewable }] = await Promise.all([
-    supabase.from("ideas").select(IDEA_SELECT).eq("event_id", id),
-    supabase.from("contributions").select("idea_id, event_id, member_id, percent").eq("event_id", id),
-    // Listes visibles : on interroge la fonction de la base pour chaque bénéficiaire
-    Promise.all(
-      (event.event_beneficiaries ?? []).map(async (b) => {
-        const { data } = await supabase.rpc("can_view_list", { owner: b.member_id });
-        return [b.member_id, data === true] as const;
-      }),
-    ).then((r) => ({ data: new Map(r) })),
-  ]);
-  const ideas = (ideaRows ?? []) as Idea[];
-  const contributions = (contribRows ?? []) as Contribution[];
 
   // Moi d'abord ? Non : la personne qui offre veut voir les autres en premier.
   const beneficiaries = (event.event_beneficiaries ?? [])

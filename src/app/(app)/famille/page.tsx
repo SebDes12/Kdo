@@ -2,8 +2,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { createChild, createGroup, createInvitation, deleteInvitation } from "@/app/actions/family";
-import { ConfirmButton, ShareLink, SubmitButton } from "@/components/client";
+import { createChild, createGroup, createInvitation, createResetLink, deleteInvitation } from "@/app/actions/family";
+import { ConfirmButton, ResetLinkButton, ShareLink, SubmitButton } from "@/components/client";
 import { Avatar, Badge, Empty, Notice, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
 import { loadSharing } from "./load";
@@ -14,15 +14,12 @@ export const metadata: Metadata = { title: "Famille" };
 export default async function FamilyPage({ searchParams }: PageProps<"/famille">) {
   const sp = await searchParams;
   const session = await getSession();
-  const { supabase, me, members, children, parentLinks, member } = session;
+  const { q, me, members, children, parentLinks, member } = session;
   if (me.is_child) redirect("/");
 
-  const [{ groups, groupMembers, shares }, { data: invRows }] = await Promise.all([
+  const [{ groups, groupMembers, shares }, invRows] = await Promise.all([
     loadSharing(session),
-    supabase
-      .from("invitations")
-      .select("token, group_id, expires_at, used_at, used_by")
-      .order("created_at", { ascending: false }),
+    q("select token, group_id, expires_at, used_at, used_by from invitations order by created_at desc"),
   ]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
@@ -138,18 +135,27 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
         )}
       </Section>
 
-      <Section title="Toute la famille">
+      <Section
+        title="Toute la famille"
+        id="membres"
+        description="Quelqu'un a oublié son mot de passe ? Crée-lui un lien avec « Mot de passe »."
+      >
         {members.length === 0 ? (
           <Empty>Personne pour l&apos;instant.</Empty>
         ) : (
-          <ul className="flex flex-wrap gap-2">
+          <ul className="card divide-y divide-line">
             {members.map((m) => {
               const parents = parentLinks.filter((l) => l.child_id === m.id).map((l) => member(l.parent_id)?.display_name);
               return (
-                <li key={m.id} className="flex items-center gap-2 rounded-full border border-line bg-white py-1 pl-1 pr-3 text-sm">
+                <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm">
                   <Avatar member={m} size="sm" />
-                  <span className="font-bold">{m.display_name}</span>
+                  <span className="font-bold">{m.display_name}{m.id === me.id && " (moi)"}</span>
                   {m.is_child && <span className="text-xs text-muted">enfant de {parents.join(" et ")}</span>}
+                  {!m.is_child && m.id !== me.id && (
+                    <div className="ml-auto">
+                      <ResetLinkButton name={m.display_name} action={createResetLink.bind(null, m.id)} />
+                    </div>
+                  )}
                 </li>
               );
             })}

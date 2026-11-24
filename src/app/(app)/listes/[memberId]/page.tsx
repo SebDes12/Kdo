@@ -6,7 +6,7 @@ import { IdeaCard } from "@/components/idea-card";
 import { SubmitButton } from "@/components/client";
 import { Avatar, Empty, Notice, PageHeader, Section } from "@/components/ui";
 import { formatCountdown, formatDate, isActive } from "@/lib/format";
-import { IDEA_SELECT, ideaStatus, sortForGiver, sortForOwner } from "@/lib/ideas";
+import { CONTRIBUTIONS_SQL, EVENTS_SQL, IDEAS_SQL, ideaStatus, sortForGiver, sortForOwner } from "@/lib/ideas";
 import { getSession } from "@/lib/session";
 import type { Contribution, EventRow, Idea } from "@/lib/types";
 
@@ -14,24 +14,26 @@ export const metadata: Metadata = { title: "Liste" };
 
 export default async function ListPage({ params }: PageProps<"/listes/[memberId]">) {
   const { memberId } = await params;
-  const { supabase, me, member, canManageList } = await getSession();
+  const { tx, me, member, canManageList } = await getSession();
   const owner = member(memberId);
   if (!owner || !canManageList(memberId)) notFound();
   const isMe = owner.id === me.id;
   const back = `/listes/${memberId}`;
 
-  const [{ data: ideaRows }, { data: evRows }, { data: contribRows }] = await Promise.all([
-    supabase.from("ideas").select(IDEA_SELECT).eq("beneficiary_id", memberId),
-    supabase
-      .from("events")
-      .select("id, name, event_date, created_by, event_beneficiaries!inner(member_id)")
-      .eq("event_beneficiaries.member_id", memberId)
-      .order("event_date"),
-    supabase.from("contributions").select("idea_id, event_id, member_id, percent"),
-  ]);
-  const ideas = (ideaRows ?? []) as Idea[];
-  const events = (evRows ?? []) as EventRow[];
-  const contributions = (contribRows ?? []) as Contribution[];
+  const { ideas, events, contributions } = await tx(async (q) => ({
+    ideas: await q<Idea>(`${IDEAS_SQL} where i.beneficiary_id = $1`, [memberId]),
+    events: await q<EventRow>(
+      `${EVENTS_SQL}
+       where exists (select 1 from event_beneficiaries b where b.event_id = e.id and b.member_id = $1)
+          or e.id in (select event_id from ideas where beneficiary_id = $1)
+       order by e.event_date`,
+      [memberId],
+    ),
+    contributions: await q<Contribution>(
+      `${CONTRIBUTIONS_SQL} where idea_id in (select id from ideas where beneficiary_id = $1)`,
+      [memberId],
+    ),
+  }));
   const upcoming = events.filter((e) => isActive(e.event_date));
   const eventById = new Map(events.map((e) => [e.id, e]));
 

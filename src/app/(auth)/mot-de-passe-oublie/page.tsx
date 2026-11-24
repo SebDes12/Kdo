@@ -1,25 +1,24 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requestPasswordReset } from "@/app/actions/auth";
 import { AuthCard } from "@/components/ui";
-import { SubmitButton } from "@/components/client";
 
 export const metadata: Metadata = { title: "Mot de passe oublié" };
 
 export default function ForgotPage() {
   return (
-    <AuthCard title="Mot de passe oublié" subtitle="Tu vas recevoir un lien pour choisir un nouveau mot de passe.">
-      <form action={requestPasswordReset} className="space-y-4">
-        <div>
-          <label className="label" htmlFor="email">E-mail</label>
-          <input id="email" name="email" type="email" className="field" required />
-        </div>
-        <SubmitButton className="btn-primary w-full" pendingText="Envoi…">Envoyer le lien</SubmitButton>
-      </form>
-      <p className="mt-4 text-center text-sm text-muted">
-        Un enfant a oublié son mot de passe ? Son parent peut le changer dans « Famille ».
-      </p>
-      <p className="mt-2 text-center text-sm">
+    <AuthCard title="Mot de passe oublié" subtitle="Pas de panique : la famille peut t'aider.">
+      <ol className="list-decimal space-y-2 pl-5 text-sm">
+        <li>
+          Demande à un <strong>adulte de la famille</strong> d&apos;ouvrir Kdo, page <strong>Famille</strong>.
+        </li>
+        <li>
+          Dans « Toute la famille », il clique sur <strong>Mot de passe</strong> à côté de ton prénom et
+          t&apos;envoie le lien obtenu.
+        </li>
+        <li>Ouvre ce lien et choisis un nouveau mot de passe.</li>
+      </ol>
+      <p className="mt-4 text-sm text-muted">Pour un enfant, c&apos;est son parent qui change le mot de passe.</p>
+      <p className="mt-4 text-center text-sm">
         <Link href="/connexion" className="font-semibold text-muted hover:text-ink">← Retour</Link>
       </p>
     </AuthCard>

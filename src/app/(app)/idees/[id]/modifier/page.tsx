@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { getSession } from "@/lib/session";
 import { safePath } from "@/lib/redirect";
-import { IDEA_SELECT } from "@/lib/ideas";
+import { IDEAS_SQL } from "@/lib/ideas";
+import { isUuid } from "@/lib/format";
 import type { Idea } from "@/lib/types";
 import { IdeaForm } from "../../idea-form";
 import { upcomingEventsFor } from "../../load";
@@ -14,11 +15,11 @@ export default async function EditIdeaPage({ params, searchParams }: PageProps<"
   const { id } = await params;
   const sp = await searchParams;
   const session = await getSession();
-  const { supabase, me, member, isParentOf } = session;
-  const { data } = await supabase.from("ideas").select(IDEA_SELECT).eq("id", id).maybeSingle();
-  const idea = data as Idea | null;
+  const { q, me, member, isParentOf } = session;
+  if (!isUuid(id)) notFound();
+  const [idea] = await q<Idea & { can_edit: boolean }>(`select x.*, can_edit_idea(x.id) as can_edit from (${IDEAS_SQL} where i.id = $1) x`, [id]);
   if (!idea) notFound();
-  const { data: canEdit } = await supabase.rpc("can_edit_idea", { i: id });
+  const canEdit = idea.can_edit;
   const beneficiary = member(idea.beneficiary_id);
   if (!canEdit || !beneficiary) notFound();
 

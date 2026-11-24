@@ -32,9 +32,10 @@ export default async function AccountPage() {
 
       {!me.is_child && (
         <Section title="Mot de passe" id="mot-de-passe">
-          <form action={updatePassword} className="card flex gap-2 p-4">
+          <form action={updatePassword} className="card grid gap-2 p-4 sm:grid-cols-[1fr_1fr_auto]">
+            <input name="current" type="password" className="field" placeholder="Mot de passe actuel" required autoComplete="current-password" aria-label="Mot de passe actuel" />
             <input name="password" type="password" className="field" placeholder="Nouveau mot de passe" minLength={8} required autoComplete="new-password" aria-label="Nouveau mot de passe" />
-            <SubmitButton className="btn-secondary shrink-0">Changer</SubmitButton>
+            <SubmitButton className="btn-secondary">Changer</SubmitButton>
           </form>
         </Section>
       )}

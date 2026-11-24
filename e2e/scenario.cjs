@@ -1,5 +1,5 @@
-// Scénario de bout en bout : base Supabase vide + app lancée sur BASE_URL.
-// Usage : npx supabase db reset && npm run build && npm start & node e2e/scenario.cjs
+// Scénario de bout en bout : base vide + app lancée sur BASE_URL.
+// Usage : DATABASE_URL=… npm run build && npm start & node e2e/scenario.cjs
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { chromium, devices } = require("playwright");
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -135,6 +135,26 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   ok(await maman.locator("text=Perceuse sans fil").count() === 1, "mes cadeaux liste la perceuse");
   await maman.goto(BASE + "/");
   await shot(maman, "accueil-maman");
+
+  // 11. Papa crée un lien « mot de passe » pour Julie, qui le change
+  await papa.goto(BASE + "/famille#membres");
+  papa.once("dialog", (d) => d.accept());
+  await papa.locator("li", { hasText: "Julie" }).locator("text=Mot de passe").click();
+  await papa.waitForSelector("#membres input[readonly]");
+  const resetLink = await papa.inputValue("#membres input[readonly]");
+  ok(resetLink.includes("/reinitialiser/"), "lien de réinitialisation créé");
+  const julie2Ctx = await ctx(); const julie2 = await julie2Ctx.newPage();
+  await julie2.goto(resetLink);
+  await julie2.fill("#password", "nouveaumdp1");
+  await julie2.click("text=Enregistrer");
+  await julie2.waitForURL(/ok=/);
+  ok(!julie2.url().includes("connexion"), "Julie est connectée après réinitialisation");
+  await maman.goto(BASE + "/");
+  ok(maman.url().includes("/connexion"), "l'ancienne session de Julie est fermée");
+  await maman.fill("#identifiant", "maman@test.fr"); await maman.fill("#password", "nouveaumdp1");
+  await maman.click("text=Se connecter");
+  await maman.waitForURL(BASE + "/");
+  ok(true, "Julie se reconnecte avec le nouveau mot de passe");
 
   await browser.close();
   console.log("E2E OK");

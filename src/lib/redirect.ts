@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { errorMessage } from "@/lib/format";
 
 /** N'accepte que des chemins internes pour éviter les redirections ouvertes. */
 export function safePath(p: FormDataEntryValue | null | undefined, fallback = "/"): string {
@@ -22,4 +23,16 @@ export function redirectError(path: string, message: string): never {
 
 export function redirectOk(path: string, message: string): never {
   redirect(withParam(path, "ok", message));
+}
+
+/**
+ * Exécute une opération en base ; en cas d'erreur, revient sur `back`
+ * avec un message lisible.
+ */
+export async function attempt<T>(back: string, op: () => Promise<T>): Promise<T> {
+  try {
+    return await op();
+  } catch (e) {
+    redirectError(back, errorMessage(e));
+  }
 }

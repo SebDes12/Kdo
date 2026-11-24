@@ -3,22 +3,24 @@ import type { Metadata } from "next";
 import { acceptInvitation } from "@/app/actions/auth";
 import { AuthCard, Notice } from "@/components/ui";
 import { SubmitButton } from "@/components/client";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { asAdmin } from "@/lib/db";
 import { AccountFields } from "../../account-fields";
 
 export const metadata: Metadata = { title: "Invitation" };
 
 export default async function InvitationPage({ params }: PageProps<"/invitation/[token]">) {
   const { token } = await params;
-  const admin = createAdminClient();
-  const { data: inv } = await admin
-    .from("invitations")
-    .select("token, used_at, expires_at, creator:members!invitations_created_by_fkey(display_name), group:groups(name)")
-    .eq("token", token)
-    .maybeSingle();
-
-  const valid = inv && !inv.used_at && new Date(inv.expires_at) > new Date();
-  if (!valid) {
+  const [inv] = await asAdmin((q) =>
+    q<{ creator: string | null; group: string | null }>(
+      `select m.display_name as creator, g.name as "group"
+       from invitations i
+       left join members m on m.id = i.created_by
+       left join groups g on g.id = i.group_id
+       where i.token = $1 and i.used_at is null and i.expires_at > now()`,
+      [token],
+    ),
+  );
+  if (!inv) {
     return (
       <AuthCard title="Invitation expirée">
         <Notice tone="info">Ce lien a déjà été utilisé ou a expiré. Demande un nouveau lien à ta famille.</Notice>
@@ -26,8 +28,7 @@ export default async function InvitationPage({ params }: PageProps<"/invitation/
       </AuthCard>
     );
   }
-  const creator = (inv.creator as unknown as { display_name: string } | null)?.display_name;
-  const group = (inv.group as unknown as { name: string } | null)?.name;
+  const { creator, group } = inv;
 
   return (
     <AuthCard

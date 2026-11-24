@@ -1,7 +1,22 @@
 import type { Contribution, Idea } from "@/lib/types";
 
-export const IDEA_SELECT =
-  "id, beneficiary_id, event_id, title, description, price_cents, priority, image_url, is_secret, created_by, created_at, idea_links(id, url, position)";
+/** Idées avec leurs liens (à compléter par un WHERE sur l'alias i). */
+export const IDEAS_SQL = `
+  select i.id, i.beneficiary_id, i.event_id, i.title, i.description, i.price_cents, i.priority,
+         i.image_url, i.is_secret, i.created_by, i.created_at,
+         coalesce((select json_agg(json_build_object('id', l.id, 'url', l.url, 'position', l.position)
+                                   order by l.position)
+                   from idea_links l where l.idea_id = i.id), '[]') as idea_links
+  from ideas i`;
+
+/** Événements avec leurs bénéficiaires (à compléter par un WHERE sur l'alias e). */
+export const EVENTS_SQL = `
+  select e.id, e.name, e.event_date, e.created_by,
+         coalesce((select json_agg(json_build_object('member_id', b.member_id))
+                   from event_beneficiaries b where b.event_id = e.id), '[]') as event_beneficiaries
+  from events e`;
+
+export const CONTRIBUTIONS_SQL = "select idea_id, event_id, member_id, percent from contributions";
 
 export type IdeaStatus = {
   total: number;

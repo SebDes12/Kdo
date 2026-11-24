@@ -1,12 +1,23 @@
 -- =====================================================================
--- Kdo : schéma initial
+-- Kdo : schéma initial (PostgreSQL 15+, Neon)
 -- Règle absolue : le bénéficiaire d'une idée ne voit jamais
 --   * l'état « choisi » de ses idées, ni les participants, ni les %
 --   * les idées suggérées en secret par d'autres
 -- Ces règles sont appliquées ici, par la sécurité au niveau des lignes (RLS).
+--
+-- L'application exécute les requêtes des utilisateurs sous le rôle
+-- kdo_user, après avoir positionné app.session (empreinte SHA-256 du
+-- jeton de session). La base en déduit le membre connecté : sans
+-- session valide, kdo_user ne voit rien.
 -- =====================================================================
 
-create extension if not exists pgcrypto with schema extensions;
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'kdo_user') then
+    create role kdo_user nologin;
+  end if;
+end $$;
+grant kdo_user to current_user;
+grant usage on schema public to kdo_user;
 
 -- ---------------------------------------------------------------------
 -- Tables
@@ -15,11 +26,37 @@ create extension if not exists pgcrypto with schema extensions;
 -- Un membre de la famille. Un enfant peut ne pas avoir de compte de connexion.
 create table public.members (
   id           uuid primary key default gen_random_uuid(),
-  user_id      uuid unique references auth.users (id) on delete set null,
   display_name text not null check (length(btrim(display_name)) between 1 and 60),
   is_child     boolean not null default false,
   login        text unique check (login ~ '^[a-z0-9][a-z0-9._-]{1,30}$'),
   created_at   timestamptz not null default now()
+);
+
+-- Identifiants de connexion : jamais lisibles par kdo_user.
+-- Adulte : e-mail ; enfant : pseudo (members.login), sans e-mail.
+create table public.accounts (
+  member_id     uuid primary key references public.members (id) on delete cascade,
+  email         text unique check (email = lower(email)),
+  password_hash text not null,
+  created_at    timestamptz not null default now()
+);
+
+create table public.sessions (
+  token_hash text primary key,
+  member_id  uuid not null references public.members (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+create index sessions_member_idx on public.sessions (member_id);
+
+-- Lien de réinitialisation du mot de passe, généré par un adulte de la famille.
+create table public.password_resets (
+  token_hash text primary key,
+  member_id  uuid not null references public.members (id) on delete cascade,
+  created_by uuid references public.members (id) on delete set null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '2 days',
+  used_at    timestamptz
 );
 
 -- Parents gestionnaires d'un enfant (plusieurs parents possibles).
@@ -110,7 +147,7 @@ create table public.contributions (
 create index contributions_member_idx on public.contributions (member_id);
 
 create table public.invitations (
-  token      text primary key default encode(extensions.gen_random_bytes(18), 'hex'),
+  token      text primary key default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
   created_by uuid not null references public.members (id) on delete cascade,
   group_id   uuid references public.groups (id) on delete set null,
   created_at timestamptz not null default now(),
@@ -126,12 +163,14 @@ create table public.invitations (
 
 create or replace function public.current_member_id()
 returns uuid language sql stable security definer set search_path = public as $$
-  select id from public.members where user_id = auth.uid()
+  select s.member_id from public.sessions s
+  where s.token_hash = nullif(current_setting('app.session', true), '')
+    and s.expires_at > now()
 $$;
 
 create or replace function public.current_is_adult()
 returns boolean language sql stable security definer set search_path = public as $$
-  select coalesce((select not is_child from public.members where user_id = auth.uid()), false)
+  select coalesce((select not is_child from public.members where id = public.current_member_id()), false)
 $$;
 
 create or replace function public.is_parent_of(child uuid)
@@ -293,42 +332,46 @@ alter table public.ideas               enable row level security;
 alter table public.idea_links          enable row level security;
 alter table public.contributions       enable row level security;
 alter table public.invitations         enable row level security;
+alter table public.accounts            enable row level security;
+alter table public.sessions            enable row level security;
+alter table public.password_resets     enable row level security;
+-- accounts, sessions, password_resets : aucune politique ni droit pour kdo_user.
 
-revoke all on all tables in schema public from anon, authenticated;
-revoke all on all functions in schema public from anon, public;
-grant execute on all functions in schema public to authenticated;
+revoke all on all tables in schema public from public, kdo_user;
+revoke all on all functions in schema public from public;
+grant execute on all functions in schema public to kdo_user;
 
 -- members : annuaire de la famille, lecture pour tous les membres.
-grant select on public.members to authenticated;
-grant update (display_name) on public.members to authenticated;
-create policy members_select on public.members for select to authenticated
+grant select on public.members to kdo_user;
+grant update (display_name) on public.members to kdo_user;
+create policy members_select on public.members for select to kdo_user
   using (public.current_member_id() is not null);
-create policy members_update on public.members for update to authenticated
+create policy members_update on public.members for update to kdo_user
   using (public.can_admin_member(id) or id = public.current_member_id())
   with check (public.can_admin_member(id) or id = public.current_member_id());
 
 -- parent_links : lecture seule (modifs via fonctions dédiées).
-grant select on public.parent_links to authenticated;
-create policy parent_links_select on public.parent_links for select to authenticated
+grant select on public.parent_links to kdo_user;
+create policy parent_links_select on public.parent_links for select to kdo_user
   using (public.current_member_id() is not null);
 
 -- groups
-grant select, insert, update, delete on public.groups to authenticated;
-create policy groups_select on public.groups for select to authenticated
+grant select, insert, update, delete on public.groups to kdo_user;
+create policy groups_select on public.groups for select to kdo_user
   using (public.current_member_id() is not null);
-create policy groups_insert on public.groups for insert to authenticated
+create policy groups_insert on public.groups for insert to kdo_user
   with check (public.current_is_adult() and created_by = public.current_member_id());
-create policy groups_update on public.groups for update to authenticated
+create policy groups_update on public.groups for update to kdo_user
   using (created_by = public.current_member_id());
-create policy groups_delete on public.groups for delete to authenticated
+create policy groups_delete on public.groups for delete to kdo_user
   using (created_by = public.current_member_id());
 
 -- group_members : un membre du groupe (adulte) ou son créateur peut ajouter ;
 -- on peut retirer quelqu'un si on a créé le groupe, ou se retirer soi-même.
-grant select, insert, delete on public.group_members to authenticated;
-create policy group_members_select on public.group_members for select to authenticated
+grant select, insert, delete on public.group_members to kdo_user;
+create policy group_members_select on public.group_members for select to kdo_user
   using (public.current_member_id() is not null);
-create policy group_members_insert on public.group_members for insert to authenticated
+create policy group_members_insert on public.group_members for insert to kdo_user
   with check (
     public.current_is_adult() and (
       exists (select 1 from public.groups g where g.id = group_id and g.created_by = public.current_member_id())
@@ -336,50 +379,50 @@ create policy group_members_insert on public.group_members for insert to authent
                  and gm.member_id = public.current_member_id())
     )
   );
-create policy group_members_delete on public.group_members for delete to authenticated
+create policy group_members_delete on public.group_members for delete to kdo_user
   using (
     member_id = public.current_member_id()
     or exists (select 1 from public.groups g where g.id = group_id and g.created_by = public.current_member_id())
   );
 
 -- list_shares : réglée par l'adulte lui-même ou par le parent de l'enfant.
-grant select, insert, delete on public.list_shares to authenticated;
-create policy list_shares_select on public.list_shares for select to authenticated
+grant select, insert, delete on public.list_shares to kdo_user;
+create policy list_shares_select on public.list_shares for select to kdo_user
   using (public.can_manage_list(owner_id));
-create policy list_shares_insert on public.list_shares for insert to authenticated
+create policy list_shares_insert on public.list_shares for insert to kdo_user
   with check (public.can_admin_member(owner_id));
-create policy list_shares_delete on public.list_shares for delete to authenticated
+create policy list_shares_delete on public.list_shares for delete to kdo_user
   using (public.can_admin_member(owner_id));
 
 -- events
-grant select, insert, update, delete on public.events to authenticated;
-create policy events_select on public.events for select to authenticated
+grant select, insert, update, delete on public.events to kdo_user;
+create policy events_select on public.events for select to kdo_user
   using (created_by = public.current_member_id() or public.can_view_event(id));
-create policy events_insert on public.events for insert to authenticated
+create policy events_insert on public.events for insert to kdo_user
   with check (public.current_is_adult() and created_by = public.current_member_id());
-create policy events_update on public.events for update to authenticated
+create policy events_update on public.events for update to kdo_user
   using (created_by = public.current_member_id());
-create policy events_delete on public.events for delete to authenticated
+create policy events_delete on public.events for delete to kdo_user
   using (created_by = public.current_member_id());
 
-grant select, insert, delete on public.event_beneficiaries to authenticated;
-create policy event_beneficiaries_select on public.event_beneficiaries for select to authenticated
+grant select, insert, delete on public.event_beneficiaries to kdo_user;
+create policy event_beneficiaries_select on public.event_beneficiaries for select to kdo_user
   using (public.can_view_event(event_id));
-create policy event_beneficiaries_insert on public.event_beneficiaries for insert to authenticated
+create policy event_beneficiaries_insert on public.event_beneficiaries for insert to kdo_user
   with check (exists (select 1 from public.events e where e.id = event_id and e.created_by = public.current_member_id()));
-create policy event_beneficiaries_delete on public.event_beneficiaries for delete to authenticated
+create policy event_beneficiaries_delete on public.event_beneficiaries for delete to kdo_user
   using (exists (select 1 from public.events e where e.id = event_id and e.created_by = public.current_member_id()));
 
 -- ideas
-grant select, insert, update, delete on public.ideas to authenticated;
-create policy ideas_select on public.ideas for select to authenticated
+grant select, insert, update, delete on public.ideas to kdo_user;
+create policy ideas_select on public.ideas for select to kdo_user
   using (
     case when beneficiary_id = public.current_member_id()
       then not is_secret                       -- ses propres idées, jamais les secrètes
       else public.can_view_list(beneficiary_id)
     end
   );
-create policy ideas_insert on public.ideas for insert to authenticated
+create policy ideas_insert on public.ideas for insert to kdo_user
   with check (
     created_by = public.current_member_id()
     and case
@@ -388,7 +431,7 @@ create policy ideas_insert on public.ideas for insert to authenticated
       else is_secret and public.can_view_list(beneficiary_id)
     end
   );
-create policy ideas_update on public.ideas for update to authenticated
+create policy ideas_update on public.ideas for update to kdo_user
   using (public.can_edit_idea(id))
   with check (
     case
@@ -397,44 +440,44 @@ create policy ideas_update on public.ideas for update to authenticated
       else is_secret
     end
   );
-create policy ideas_delete on public.ideas for delete to authenticated
+create policy ideas_delete on public.ideas for delete to kdo_user
   using (public.can_edit_idea(id));
 
 -- idea_links : suivent la visibilité de l'idée (RLS de ideas appliquée).
-grant select, insert, update, delete on public.idea_links to authenticated;
-create policy idea_links_select on public.idea_links for select to authenticated
+grant select, insert, update, delete on public.idea_links to kdo_user;
+create policy idea_links_select on public.idea_links for select to kdo_user
   using (exists (select 1 from public.ideas i where i.id = idea_id));
-create policy idea_links_write on public.idea_links for all to authenticated
+create policy idea_links_write on public.idea_links for all to kdo_user
   using (public.can_edit_idea(idea_id))
   with check (public.can_edit_idea(idea_id));
 
 -- contributions : jamais visibles par le bénéficiaire.
-grant select, insert, update, delete on public.contributions to authenticated;
-create policy contributions_select on public.contributions for select to authenticated
+grant select, insert, update, delete on public.contributions to kdo_user;
+create policy contributions_select on public.contributions for select to kdo_user
   using (public.can_see_contributions(idea_id));
-create policy contributions_insert on public.contributions for insert to authenticated
+create policy contributions_insert on public.contributions for insert to kdo_user
   with check (
     member_id = public.current_member_id()
     and public.can_see_contributions(idea_id)
     and public.event_is_active(event_id)
     and exists (select 1 from public.ideas i where i.id = idea_id and i.event_id = contributions.event_id)
   );
-create policy contributions_update on public.contributions for update to authenticated
+create policy contributions_update on public.contributions for update to kdo_user
   using (member_id = public.current_member_id() and public.event_is_active(event_id))
   with check (member_id = public.current_member_id() and public.event_is_active(event_id));
-create policy contributions_delete on public.contributions for delete to authenticated
+create policy contributions_delete on public.contributions for delete to kdo_user
   using (member_id = public.current_member_id() and public.event_is_active(event_id));
 
 -- invitations : chacun voit et gère les siennes. La consommation se fait
 -- côté serveur avec la clé service_role.
-grant select, insert, delete on public.invitations to authenticated;
-create policy invitations_select on public.invitations for select to authenticated
+grant select, insert, delete on public.invitations to kdo_user;
+create policy invitations_select on public.invitations for select to kdo_user
   using (created_by = public.current_member_id());
-create policy invitations_insert on public.invitations for insert to authenticated
+create policy invitations_insert on public.invitations for insert to kdo_user
   with check (public.current_is_adult() and created_by = public.current_member_id()
               and (group_id is null or exists (select 1 from public.group_members gm
                    where gm.group_id = invitations.group_id and gm.member_id = public.current_member_id())));
-create policy invitations_delete on public.invitations for delete to authenticated
+create policy invitations_delete on public.invitations for delete to kdo_user
   using (created_by = public.current_member_id());
 
 -- ---------------------------------------------------------------------
@@ -493,12 +536,32 @@ create or replace function public.emancipate_child(child uuid)
 returns void language plpgsql security definer set search_path = public as $$
 begin
   if not public.is_parent_of(child) then raise exception 'Vous n''êtes pas parent de cet enfant'; end if;
-  if not exists (select 1 from public.members where id = child and user_id is not null) then
+  if not exists (select 1 from public.accounts where member_id = child) then
     raise exception 'Créez d''abord un identifiant de connexion pour cet enfant';
   end if;
   update public.members set is_child = false where id = child;
   delete from public.parent_links where child_id = child;
 end $$;
 
-revoke all on all functions in schema public from anon, public;
-grant execute on all functions in schema public to authenticated;
+-- Lien de réinitialisation du mot de passe d'un autre adulte (pas d'e-mail).
+-- Renvoie le jeton en clair une seule fois ; seule son empreinte est stockée.
+create or replace function public.create_password_reset(target uuid)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  raw text := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+begin
+  if not public.current_is_adult() then raise exception 'Réservé aux adultes'; end if;
+  if target = public.current_member_id() then
+    raise exception 'Change ton propre mot de passe depuis « Mon compte »';
+  end if;
+  if not exists (select 1 from public.members m join public.accounts a on a.member_id = m.id
+                 where m.id = target and not m.is_child) then
+    raise exception 'Cette personne n''a pas de compte adulte';
+  end if;
+  insert into public.password_resets (token_hash, member_id, created_by)
+    values (encode(sha256(convert_to(raw, 'UTF8')), 'hex'), target, public.current_member_id());
+  return raw;
+end $$;
+
+revoke all on all functions in schema public from public;
+grant execute on all functions in schema public to kdo_user;

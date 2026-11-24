@@ -1,4 +1,4 @@
-/** Date du jour (UTC), comme current_date côté base Supabase. */
+/** Date du jour (UTC), comme current_date côté base (UTC). */
 export function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -47,10 +47,16 @@ export function hostname(url: string): string {
   }
 }
 
-/** Texte d'erreur lisible à partir d'une erreur Supabase/Postgres. */
-export function errorMessage(e: { message?: string } | null | undefined): string {
-  const m = e?.message ?? "Une erreur est survenue";
-  if (m.includes("row-level security")) return "Action non autorisée";
+/** Texte d'erreur lisible à partir d'une erreur Postgres (ou autre). */
+export function errorMessage(e: unknown): string {
+  const m = e instanceof Error ? e.message : typeof e === "string" ? e : "Une erreur est survenue";
+  if (m.includes("row-level security") || m.includes("permission denied")) return "Action non autorisée";
   if (m.includes("duplicate key")) return "Cet élément existe déjà";
+  if (m.includes("violates check constraint")) return "Valeur invalide";
+  if (m.includes("invalid input syntax")) return "Valeur invalide";
   return m;
+}
+
+export function isUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 }

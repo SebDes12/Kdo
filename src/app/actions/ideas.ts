@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
 import { errorMessage } from "@/lib/format";
-import { redirectError, redirectOk, safePath } from "@/lib/redirect";
+import { attempt, redirectError, redirectOk, safePath } from "@/lib/redirect";
+import { getSession } from "@/lib/session";
 
 function str(fd: FormData, key: string): string {
   return String(fd.get(key) ?? "").trim();
@@ -29,7 +29,7 @@ function normalizeUrl(raw: string): string | null {
 
 /** Création ou modification d'une idée (formulaire unique). */
 export async function saveIdea(fd: FormData) {
-  const { supabase, me, isParentOf } = await getSession();
+  const { tx, me, isParentOf } = await getSession();
   const id = str(fd, "id") || null;
   const back = safePath(fd.get("back"));
   const formPath = safePath(fd.get("form"), back);
@@ -37,104 +37,117 @@ export async function saveIdea(fd: FormData) {
 
   const title = str(fd, "title");
   if (!title) redirectError(formPath, "Le titre est obligatoire");
-  const rawLinks = fd.getAll("links").map(String).filter((l) => l.trim());
-  const links = rawLinks.map(normalizeUrl);
+  const links = fd.getAll("links").map(String).filter((l) => l.trim()).map(normalizeUrl);
   if (links.some((l) => l === null)) redirectError(formPath, "Un des liens n'est pas valide");
 
   // Règle : pour soi = visible ; parent = au choix ; autre personne = secret.
-  const isSecret =
-    beneficiary === me.id ? false : isParentOf(beneficiary) ? fd.get("secret") === "on" : true;
-
-  const fields = {
+  const isSecret = beneficiary === me.id ? false : isParentOf(beneficiary) ? fd.get("secret") === "on" : true;
+  const fields = [
     title,
-    description: str(fd, "description") || null,
-    price_cents: parsePrice(str(fd, "price")),
-    priority: Math.min(3, Math.max(0, Number(fd.get("priority") ?? 0) || 0)),
-    image_url: normalizeUrl(str(fd, "image")),
-    event_id: str(fd, "event") || null,
-    is_secret: isSecret,
-  };
+    str(fd, "description") || null,
+    parsePrice(str(fd, "price")),
+    Math.min(3, Math.max(0, Number(fd.get("priority") ?? 0) || 0)),
+    normalizeUrl(str(fd, "image")),
+    str(fd, "event") || null,
+    isSecret,
+  ];
 
-  let ideaId = id;
-  if (id) {
-    const { data, error } = await supabase.from("ideas").update(fields).eq("id", id).select("id");
-    if (error || !data?.length) redirectError(formPath, errorMessage(error ?? { message: "Action non autorisée" }));
-    await supabase.from("idea_links").delete().eq("idea_id", id);
-  } else {
-    const { data, error } = await supabase
-      .from("ideas")
-      .insert({ ...fields, beneficiary_id: beneficiary, created_by: me.id })
-      .select("id")
-      .single();
-    if (error || !data) redirectError(formPath, errorMessage(error));
-    ideaId = data.id;
-  }
-  if (links.length) {
-    const { error } = await supabase
-      .from("idea_links")
-      .insert(links.map((url, position) => ({ idea_id: ideaId, url, position })));
-    if (error) redirectError(formPath, errorMessage(error));
-  }
+  const saved = await attempt(formPath, () =>
+    tx(async (q) => {
+      let ideaId = id;
+      if (id) {
+        const rows = await q(
+          `update ideas set title = $2, description = $3, price_cents = $4, priority = $5,
+             image_url = $6, event_id = $7, is_secret = $8
+           where id = $1 returning id`,
+          [id, ...fields],
+        );
+        if (!rows.length) return false;
+        await q("delete from idea_links where idea_id = $1", [id]);
+      } else {
+        const [row] = await q<{ id: string }>(
+          `insert into ideas (title, description, price_cents, priority, image_url, event_id, is_secret,
+             beneficiary_id, created_by)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id`,
+          [...fields, beneficiary, me.id],
+        );
+        ideaId = row.id;
+      }
+      if (links.length) {
+        await q(
+          `insert into idea_links (idea_id, url, position)
+           select $1, u.url, u.ord - 1 from unnest($2::text[]) with ordinality as u(url, ord)`,
+          [ideaId, links],
+        );
+      }
+      return true;
+    }),
+  );
+  if (!saved) redirectError(formPath, "Action non autorisée");
   revalidatePath("/", "layout");
-  redirectOk(back, id ? "Idée modifiée" : isSecret && beneficiary !== me.id && !isParentOf(beneficiary)
-    ? "Idée suggérée (elle reste secrète pour la personne)" : "Idée ajoutée");
+  redirectOk(
+    back,
+    id
+      ? "Idée modifiée"
+      : isSecret && beneficiary !== me.id && !isParentOf(beneficiary)
+        ? "Idée suggérée (elle reste secrète pour la personne)"
+        : "Idée ajoutée",
+  );
 }
 
 export async function deleteIdea(ideaId: string, back: string) {
-  const { supabase } = await getSession();
+  const { q } = await getSession();
   const path = safePath(back);
-  const { data, error } = await supabase.from("ideas").delete().eq("id", ideaId).select("id");
-  if (error || !data?.length) redirectError(path, "Action non autorisée");
+  const rows = await attempt(path, () => q("delete from ideas where id = $1 returning id", [ideaId]));
+  if (!rows.length) redirectError(path, "Action non autorisée");
   revalidatePath("/", "layout");
   redirectOk(path, "Idée supprimée");
 }
 
 /** Report d'une idée (en réserve ou d'un événement passé) vers un événement. */
 export async function moveIdea(fd: FormData) {
-  const { supabase } = await getSession();
+  const { q } = await getSession();
   const back = safePath(fd.get("back"));
-  const { data, error } = await supabase
-    .from("ideas")
-    .update({ event_id: str(fd, "event") || null })
-    .eq("id", str(fd, "idea"))
-    .select("id");
-  if (error || !data?.length) redirectError(back, errorMessage(error ?? { message: "Action non autorisée" }));
+  const rows = await attempt(back, () =>
+    q("update ideas set event_id = $2 where id = $1 returning id", [str(fd, "idea"), str(fd, "event") || null]),
+  );
+  if (!rows.length) redirectError(back, "Action non autorisée");
   revalidatePath("/", "layout");
   redirectOk(back, "Idée reportée");
 }
 
 /** Je prends (100 %) ou je participe (x %). Remplace ma participation précédente. */
 export async function contribute(fd: FormData) {
-  const { supabase, me } = await getSession();
+  const { q, me } = await getSession();
   const back = safePath(fd.get("back"));
   const percent = Math.round(Number(fd.get("percent")));
   if (!Number.isFinite(percent) || percent < 1 || percent > 100) {
     redirectError(back, "Indique un pourcentage entre 1 et 100");
   }
-  const { error } = await supabase.from("contributions").upsert({
-    idea_id: str(fd, "idea"),
-    event_id: str(fd, "event"),
-    member_id: me.id,
-    percent,
-  });
-  if (error) {
-    const m = error.message.match(/Il ne reste que (\d+) %/);
-    redirectError(back, m ? `Trop tard : il ne reste que ${m[1]} % sur cette idée` : errorMessage(error));
+  try {
+    await q(
+      `insert into contributions (idea_id, event_id, member_id, percent) values ($1, $2, $3, $4)
+       on conflict (idea_id, event_id, member_id) do update set percent = excluded.percent`,
+      [str(fd, "idea"), str(fd, "event"), me.id, percent],
+    );
+  } catch (e) {
+    const m = errorMessage(e).match(/Il ne reste que (\d+) %/);
+    redirectError(back, m ? `Trop tard : il ne reste que ${m[1]} % sur cette idée` : errorMessage(e));
   }
   revalidatePath("/", "layout");
   redirect(back);
 }
 
 export async function withdraw(fd: FormData) {
-  const { supabase, me } = await getSession();
+  const { q, me } = await getSession();
   const back = safePath(fd.get("back"));
-  const { error } = await supabase
-    .from("contributions")
-    .delete()
-    .eq("idea_id", str(fd, "idea"))
-    .eq("event_id", str(fd, "event"))
-    .eq("member_id", me.id);
-  if (error) redirectError(back, errorMessage(error));
+  await attempt(back, () =>
+    q("delete from contributions where idea_id = $1 and event_id = $2 and member_id = $3", [
+      str(fd, "idea"),
+      str(fd, "event"),
+      me.id,
+    ]),
+  );
   revalidatePath("/", "layout");
   redirectOk(back, "Participation annulée");
 }

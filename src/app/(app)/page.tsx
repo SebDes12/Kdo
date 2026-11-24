@@ -1,33 +1,30 @@
 import Link from "next/link";
 import { Avatar, Empty, PageHeader, Section } from "@/components/ui";
 import { formatCountdown, formatDate, isActive } from "@/lib/format";
-import { ideaStatus } from "@/lib/ideas";
+import { CONTRIBUTIONS_SQL, EVENTS_SQL, ideaStatus } from "@/lib/ideas";
 import { getSession } from "@/lib/session";
 import type { Contribution, EventRow } from "@/lib/types";
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
-  const { supabase, me, member } = await getSession();
+  const { tx, me, member } = await getSession();
 
-  const { data: evs } = await supabase
-    .from("events")
-    .select("id, name, event_date, created_by, event_beneficiaries(member_id)")
-    .order("event_date");
-  const events = (evs ?? []) as EventRow[];
+  // Événements + idées encore disponibles pour moi sur les événements à venir
+  const { events, ideas, contributions } = await tx(async (q) => ({
+    events: await q<EventRow>(`${EVENTS_SQL} order by e.event_date`),
+    ideas: await q<{ id: string; event_id: string }>(
+      `select i.id, i.event_id from ideas i join events e on e.id = i.event_id
+       where e.event_date >= current_date and i.beneficiary_id <> $1`,
+      [me.id],
+    ),
+    contributions: await q<Contribution>(
+      `${CONTRIBUTIONS_SQL} where event_id in (select id from events where event_date >= current_date)`,
+    ),
+  }));
   const upcoming = events.filter((e) => isActive(e.event_date));
   const past = events.filter((e) => !isActive(e.event_date)).reverse();
-
-  // Nombre d'idées encore disponibles pour moi sur chaque événement à venir
-  const ids = upcoming.map((e) => e.id);
-  const [{ data: ideas }, { data: contribs }] = ids.length
-    ? await Promise.all([
-        supabase.from("ideas").select("id, event_id, beneficiary_id").in("event_id", ids).neq("beneficiary_id", me.id),
-        supabase.from("contributions").select("idea_id, event_id, member_id, percent").in("event_id", ids),
-      ])
-    : [{ data: [] }, { data: [] }];
-  const contributions = (contribs ?? []) as Contribution[];
   const stats = (eventId: string) => {
-    const list = (ideas ?? []).filter((i) => i.event_id === eventId);
+    const list = ideas.filter((i) => i.event_id === eventId);
     const st = list.map((i) => ideaStatus(i.id, eventId, contributions, me.id));
     return { free: st.filter((s) => s.total < 100).length, mine: st.filter((s) => s.mine > 0).length };
   };

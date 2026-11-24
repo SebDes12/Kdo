@@ -4,20 +4,17 @@ import { deleteEvent, updateEvent } from "@/app/actions/events";
 import { ConfirmButton } from "@/components/client";
 import { PageHeader } from "@/components/ui";
 import { getSession } from "@/lib/session";
+import { EVENTS_SQL } from "@/lib/ideas";
 import type { EventRow } from "@/lib/types";
+import { isUuid } from "@/lib/format";
 import { EventForm } from "../../event-form";
 
 export const metadata: Metadata = { title: "Modifier l'événement" };
 
 export default async function EditEventPage({ params }: PageProps<"/evenements/[id]/modifier">) {
   const { id } = await params;
-  const { supabase, me, members } = await getSession();
-  const { data } = await supabase
-    .from("events")
-    .select("id, name, event_date, created_by, event_beneficiaries(member_id)")
-    .eq("id", id)
-    .maybeSingle();
-  const ev = data as EventRow | null;
+  const { q, me, members } = await getSession();
+  const [ev] = isUuid(id) ? await q<EventRow>(`${EVENTS_SQL} where e.id = $1`, [id]) : [];
   if (!ev || ev.created_by !== me.id) notFound();
 
   return (

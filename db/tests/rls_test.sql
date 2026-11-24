@@ -3,7 +3,7 @@
 set client_min_messages = warning;
 
 create schema tests;
-grant usage on schema tests to authenticated;
+grant usage on schema tests to kdo_user;
 
 create function tests.ok(cond boolean, msg text) returns void language plpgsql as $$
 begin
@@ -27,40 +27,48 @@ begin
   return n;
 end $$;
 
+-- Se connecter = positionner l'empreinte d'une session existante.
 create function tests.login(u uuid) returns void language sql as $$
-  select set_config('request.jwt.claim.sub', u::text, false);
+  select set_config('app.session', 'session-' || u::text, false);
 $$;
 
-grant execute on all functions in schema tests to authenticated;
+grant execute on all functions in schema tests to kdo_user;
 
 -- ---------------------------------------------------------------------
 -- Données : papa, maman, mamie, oncle (adultes), Léo (enfant)
 -- ---------------------------------------------------------------------
-insert into auth.users (id) values
-  ('00000000-0000-0000-0000-0000000000a1'), -- papa
-  ('00000000-0000-0000-0000-0000000000a2'), -- maman
-  ('00000000-0000-0000-0000-0000000000a3'), -- mamie
-  ('00000000-0000-0000-0000-0000000000a4'), -- oncle
-  ('00000000-0000-0000-0000-0000000000a5'), -- léo
-  ('00000000-0000-0000-0000-0000000000a9'); -- inconnu (pas membre)
-insert into public.members (id, user_id, display_name) values
-  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000a1', 'Papa'),
-  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-0000000000a2', 'Maman'),
-  ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000000a3', 'Mamie'),
-  ('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-0000000000a4', 'Oncle');
+insert into public.members (id, display_name) values
+  ('10000000-0000-0000-0000-000000000001', 'Papa'),
+  ('10000000-0000-0000-0000-000000000002', 'Maman'),
+  ('10000000-0000-0000-0000-000000000003', 'Mamie'),
+  ('10000000-0000-0000-0000-000000000004', 'Oncle');
+insert into public.accounts (member_id, email, password_hash)
+  select id, lower(display_name) || '@test.fr', 'x' from public.members;
+insert into public.sessions (token_hash, member_id, expires_at)
+  select 'session-' || id, id, now() + interval '1 day' from public.members;
+-- Une session expirée pour l'oncle
+insert into public.sessions (token_hash, member_id, expires_at)
+  values ('expiree', '10000000-0000-0000-0000-000000000004', now() - interval '1 minute');
 
-\set PAPA   '''00000000-0000-0000-0000-0000000000a1'''
-\set MAMAN  '''00000000-0000-0000-0000-0000000000a2'''
-\set MAMIE  '''00000000-0000-0000-0000-0000000000a3'''
-\set ONCLE  '''00000000-0000-0000-0000-0000000000a4'''
-\set LEO_U  '''00000000-0000-0000-0000-0000000000a5'''
-\set INCONNU '''00000000-0000-0000-0000-0000000000a9'''
+\set PAPA   '''10000000-0000-0000-0000-000000000001'''
+\set MAMAN  '''10000000-0000-0000-0000-000000000002'''
+\set MAMIE  '''10000000-0000-0000-0000-000000000003'''
+\set ONCLE  '''10000000-0000-0000-0000-000000000004'''
+\set INCONNU '''99999999-9999-9999-9999-999999999999'''
 \set M_PAPA  '''10000000-0000-0000-0000-000000000001'''
 \set M_MAMAN '''10000000-0000-0000-0000-000000000002'''
 \set M_MAMIE '''10000000-0000-0000-0000-000000000003'''
 \set M_ONCLE '''10000000-0000-0000-0000-000000000004'''
 
-set role authenticated;
+set role kdo_user;
+
+-- Sans session, on ne voit rien
+select set_config('app.session', '', false);
+select tests.ok((select count(*) from public.members) = 0, 'sans session : aucun membre visible');
+select set_config('app.session', 'expiree', false);
+select tests.ok((select count(*) from public.members) = 0, 'session expirée : aucun membre visible');
+select tests.refused('select * from public.accounts', 'lire les mots de passe');
+select tests.refused('select * from public.sessions', 'lire les sessions');
 
 -- Papa crée Léo, ajoute maman comme co-parent, crée le groupe « Famille proche »
 select tests.login(:PAPA);
@@ -76,10 +84,13 @@ insert into public.list_shares (owner_id, group_id) values (:M_PAPA, :G_FAM), (:
 select tests.login(:MAMAN);
 insert into public.list_shares (owner_id, group_id) values (:M_MAMAN, :G_FAM);
 
--- Léo obtient un identifiant (fait côté serveur avec service_role)
+-- Léo obtient un identifiant (fait côté serveur, hors kdo_user)
 reset role;
-update public.members set user_id = :LEO_U, login = 'leo' where id = :M_LEO;
-set role authenticated;
+update public.members set login = 'leo' where id = :M_LEO;
+insert into public.accounts (member_id, password_hash) values (:M_LEO, 'x');
+insert into public.sessions (token_hash, member_id, expires_at) values ('session-' || :M_LEO, :M_LEO, now() + interval '1 day');
+set role kdo_user;
+\set LEO_U :M_LEO
 
 -- Un enfant ne règle pas la visibilité de sa liste
 select tests.login(:LEO_U);
@@ -211,7 +222,7 @@ alter table public.ideas disable trigger ideas_guard;
 insert into public.ideas (id, beneficiary_id, event_id, title, created_by)
   values ('20000000-0000-0000-0000-000000000001', :M_LEO, :E_PASSE, 'Ancien', :M_PAPA);
 alter table public.ideas enable trigger ideas_guard;
-set role authenticated;
+set role kdo_user;
 
 select tests.login(:MAMIE);
 select tests.refused(format('insert into public.contributions (idea_id, event_id, member_id, percent) values (%L, %L, %L, 10)',
@@ -235,6 +246,13 @@ select public.emancipate_child(:M_LEO);
 select tests.login(:LEO_U);
 insert into public.list_shares (owner_id, member_id) values (:M_LEO, :M_ONCLE);
 select tests.ok((select count(*) from public.ideas where id = :I_VELO) = 0, 'après émancipation, toujours pas de vélo visible');
+
+-- Réinitialisation de mot de passe par un adulte de la famille
+select tests.login(:PAPA);
+select tests.ok(length(public.create_password_reset(:M_MAMAN)) = 64, 'papa crée un lien de réinitialisation pour maman');
+select tests.refused(format('select public.create_password_reset(%L)', :M_PAPA), 'réinitialiser soi-même');
+select tests.login(:LEO_U);
+select tests.ok(length(public.create_password_reset(:M_MAMAN)) = 64, 'Léo émancipé est adulte : il peut aussi aider');
 
 reset role;
 select 'OK : toutes les règles sont respectées' as resultat;
