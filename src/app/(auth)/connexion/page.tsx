@@ -1,37 +1,23 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { login, logout } from "@/app/actions/auth";
+import { login } from "@/app/actions/auth";
 import { AuthCard, Notice } from "@/components/ui";
 import { SubmitButton } from "@/components/client";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { asAdmin } from "@/lib/db";
+import { currentMemberId } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Connexion" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/connexion">) {
   const sp = await searchParams;
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-
-  if (data?.claims && !sp.orphelin) redirect("/");
-
-  if (data?.claims && sp.orphelin) {
-    return (
-      <AuthCard title="Compte non rattaché">
-        <Notice tone="info">Ce compte n&apos;est rattaché à aucun membre de la famille.</Notice>
-        <form action={logout}>
-          <SubmitButton className="btn-secondary w-full">Se déconnecter</SubmitButton>
-        </form>
-      </AuthCard>
-    );
-  }
-
-  const { count } = await createAdminClient().from("members").select("id", { count: "exact", head: true });
-  if (count === 0) redirect("/bienvenue");
+  if (await currentMemberId()) redirect("/");
+  const [{ n }] = await asAdmin((q) => q<{ n: number }>("select count(*)::int as n from members"));
+  if (n === 0) redirect("/bienvenue");
 
   return (
     <AuthCard title="Kdo" subtitle="Les idées cadeaux de la famille">
+      {sp.expiree && <Notice tone="info">Ta session a expiré : reconnecte-toi.</Notice>}
       <form action={login} className="space-y-4">
         <div>
           <label className="label" htmlFor="identifiant">E-mail ou pseudo</label>

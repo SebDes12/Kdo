@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 export function SubmitButton({
@@ -170,6 +170,44 @@ export function ShareLink({ url }: { url: string }) {
       >
         {copied ? "Copié ✓" : "Partager"}
       </button>
+    </div>
+  );
+}
+
+type ResetState = { link?: string; error?: string };
+
+/** Bouton « Mot de passe » : génère un lien de réinitialisation pour un autre adulte. */
+export function ResetLinkButton({
+  name,
+  action,
+}: {
+  name: string;
+  action: (prev: ResetState) => Promise<ResetState>;
+}) {
+  const [state, run, pending] = useActionState(action, {});
+  return (
+    <div className="w-full">
+      {!state.link && (
+        <form action={run}>
+          <button
+            type="submit"
+            disabled={pending}
+            className="btn-ghost py-1 text-xs"
+            onClick={(e) => {
+              if (!window.confirm(`Créer un lien pour que ${name} choisisse un nouveau mot de passe ?`)) e.preventDefault();
+            }}
+          >
+            🔑 Mot de passe
+          </button>
+        </form>
+      )}
+      {state.error && <p className="mt-1 text-xs font-bold text-red-700">{state.error}</p>}
+      {state.link && (
+        <div className="mt-2 space-y-1">
+          <p className="text-xs text-muted">Envoie ce lien à {name} (valable 2 jours, une seule fois) :</p>
+          <ShareLink url={state.link} />
+        </div>
+      )}
     </div>
   );
 }

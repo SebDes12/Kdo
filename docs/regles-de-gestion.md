@@ -9,6 +9,7 @@
 | Un adulte s'inscrit via un **lien d'invitation** (e-mail + mot de passe). | ✅ |
 | Un **parent crée le compte de son enfant**. L'enfant peut avoir un login ou non. | ✅ |
 | Un enfant peut avoir **plusieurs parents gestionnaires** (les deux parents ont les mêmes droits). | ✅ |
+| Mot de passe oublié (adulte) : un **autre adulte de la famille** génère un lien de réinitialisation (valable 2 jours, une seule fois) et le lui envoie. Enfant : son parent change le mot de passe. | ✅ |
 | Un parent peut **émanciper** le compte de l'enfant, qui devient alors adulte : il gère sa visibilité et perd l'accès aux réglages parentaux. | ✅ |
 | Un parent peut ajouter, modifier et supprimer les idées de son enfant. | ✅ |
 
@@ -70,5 +71,5 @@
 | Choix | Statut |
 |---|---|
 | Web responsive installable sur le téléphone (PWA). | ✅ |
-| Next.js sur Vercel et Supabase (Postgres et authentification, avec sécurité par ligne) en offre gratuite. | ✅ |
+| Next.js sur Vercel et Neon (Postgres avec sécurité par ligne), en offre gratuite. Comptes et sessions gérés par l'application, stockés dans la base. | ✅ |
 | Aucune notification par e-mail. | ✅ |

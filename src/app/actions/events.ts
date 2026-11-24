@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { attempt, redirectError, redirectOk } from "@/lib/redirect";
 import { getSession } from "@/lib/session";
-import { errorMessage } from "@/lib/format";
-import { redirectError, redirectOk } from "@/lib/redirect";
 
 function readEvent(fd: FormData, back: string) {
   const name = String(fd.get("name") ?? "").trim();
@@ -17,49 +16,60 @@ function readEvent(fd: FormData, back: string) {
 }
 
 export async function createEvent(fd: FormData) {
-  const { supabase, me } = await getSession();
+  const { tx, me } = await getSession();
   const back = "/evenements/nouveau";
   const ev = readEvent(fd, back);
-  const { data, error } = await supabase
-    .from("events")
-    .insert({ name: ev.name, event_date: ev.date, created_by: me.id })
-    .select("id")
-    .single();
-  if (error || !data) redirectError(back, errorMessage(error));
-  const { error: bErr } = await supabase
-    .from("event_beneficiaries")
-    .insert(ev.beneficiaries.map((m) => ({ event_id: data.id, member_id: m })));
-  if (bErr) redirectError(back, errorMessage(bErr));
+  const id = await attempt(back, () =>
+    tx(async (q) => {
+      const [row] = await q<{ id: string }>(
+        "insert into events (name, event_date, created_by) values ($1, $2, $3) returning id",
+        [ev.name, ev.date, me.id],
+      );
+      await q(
+        "insert into event_beneficiaries (event_id, member_id) select $1, unnest($2::uuid[])",
+        [row.id, ev.beneficiaries],
+      );
+      return row.id;
+    }),
+  );
   revalidatePath("/", "layout");
-  redirect(`/evenements/${data.id}`);
+  redirect(`/evenements/${id}`);
 }
 
 export async function updateEvent(eventId: string, fd: FormData) {
-  const { supabase } = await getSession();
+  const { tx } = await getSession();
   const back = `/evenements/${eventId}/modifier`;
   const ev = readEvent(fd, back);
-  const { data, error } = await supabase
-    .from("events").update({ name: ev.name, event_date: ev.date }).eq("id", eventId).select("id");
-  if (error || !data?.length) redirectError(back, errorMessage(error ?? { message: "Seul le créateur peut modifier" }));
-
-  const { data: current } = await supabase.from("event_beneficiaries").select("member_id").eq("event_id", eventId);
-  const before = new Set((current ?? []).map((b) => b.member_id as string));
-  const toAdd = ev.beneficiaries.filter((m) => !before.has(m));
-  const toRemove = [...before].filter((m) => !ev.beneficiaries.includes(m));
-  if (toAdd.length) {
-    await supabase.from("event_beneficiaries").insert(toAdd.map((m) => ({ event_id: eventId, member_id: m })));
-  }
-  if (toRemove.length) {
-    await supabase.from("event_beneficiaries").delete().eq("event_id", eventId).in("member_id", toRemove);
-  }
+  const updated = await attempt(back, () =>
+    tx(async (q) => {
+      const rows = await q("update events set name = $2, event_date = $3 where id = $1 returning id", [
+        eventId,
+        ev.name,
+        ev.date,
+      ]);
+      if (!rows.length) return false;
+      await q("delete from event_beneficiaries where event_id = $1 and not (member_id = any($2::uuid[]))", [
+        eventId,
+        ev.beneficiaries,
+      ]);
+      await q(
+        `insert into event_beneficiaries (event_id, member_id)
+         select $1, unnest($2::uuid[]) on conflict do nothing`,
+        [eventId, ev.beneficiaries],
+      );
+      return true;
+    }),
+  );
+  if (!updated) redirectError(back, "Seul le créateur peut modifier");
   revalidatePath("/", "layout");
   redirectOk(`/evenements/${eventId}`, "Événement modifié");
 }
 
 export async function deleteEvent(eventId: string) {
-  const { supabase } = await getSession();
-  const { data, error } = await supabase.from("events").delete().eq("id", eventId).select("id");
-  if (error || !data?.length) redirectError(`/evenements/${eventId}/modifier`, "Seul le créateur peut supprimer");
+  const { q } = await getSession();
+  const back = `/evenements/${eventId}/modifier`;
+  const rows = await attempt(back, () => q("delete from events where id = $1 returning id", [eventId]));
+  if (!rows.length) redirectError(back, "Seul le créateur peut supprimer");
   revalidatePath("/", "layout");
   redirectOk("/", "Événement supprimé");
 }

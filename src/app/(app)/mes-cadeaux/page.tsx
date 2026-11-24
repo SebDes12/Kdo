@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Avatar, Badge, Empty, PageHeader, Section } from "@/components/ui";
 import { formatCountdown, formatDate, formatPrice, hostname, isActive } from "@/lib/format";
+import { IDEAS_SQL } from "@/lib/ideas";
 import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Mes cadeaux" };
@@ -19,12 +20,18 @@ type Row = {
 };
 
 export default async function MyGiftsPage() {
-  const { supabase, me, member } = await getSession();
-  const { data } = await supabase
-    .from("contributions")
-    .select("percent, idea:ideas(id, title, beneficiary_id, price_cents, idea_links(url, position)), event:events(id, name, event_date)")
-    .eq("member_id", me.id);
-  const rows = ((data ?? []) as unknown as Row[]).filter((r) => r.idea && r.event);
+  const { q, me, member } = await getSession();
+  const rows = await q<Row>(
+    `select c.percent,
+            json_build_object('id', i.id, 'title', i.title, 'beneficiary_id', i.beneficiary_id,
+              'price_cents', i.price_cents, 'idea_links', i.idea_links) as idea,
+            json_build_object('id', e.id, 'name', e.name, 'event_date', e.event_date) as event
+     from contributions c
+     join (${IDEAS_SQL}) i on i.id = c.idea_id
+     join events e on e.id = c.event_id
+     where c.member_id = $1`,
+    [me.id],
+  );
 
   const byEvent = new Map<string, { event: NonNullable<Row["event"]>; rows: Row[] }>();
   for (const r of rows) {

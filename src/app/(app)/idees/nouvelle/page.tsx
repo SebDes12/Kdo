@@ -11,13 +11,13 @@ export const metadata: Metadata = { title: "Nouvelle idée" };
 export default async function NewIdeaPage({ searchParams }: PageProps<"/idees/nouvelle">) {
   const sp = await searchParams;
   const session = await getSession();
-  const { me, member, isParentOf, supabase } = session;
+  const { me, member, isParentOf, q } = session;
   const pourId = typeof sp.pour === "string" ? sp.pour : me.id;
   const beneficiary = member(pourId);
   if (!beneficiary) notFound();
   if (beneficiary.id !== me.id && !isParentOf(beneficiary.id)) {
-    const { data: canView } = await supabase.rpc("can_view_list", { owner: beneficiary.id });
-    if (!canView) notFound();
+    const [{ ok }] = await q<{ ok: boolean }>("select can_view_list($1) as ok", [beneficiary.id]);
+    if (!ok) notFound();
   }
   const back = safePath(sp.back as string | undefined, `/listes/${me.id}`);
   const events = await upcomingEventsFor(session, beneficiary.id);

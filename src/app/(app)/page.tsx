@@ -1,133 +1,200 @@
 import Link from "next/link";
-import { Avatar, Empty, PageHeader, Section } from "@/components/ui";
+import { IdeaCard } from "@/components/idea-card";
+import { Avatar, Empty } from "@/components/ui";
 import { formatCountdown, formatDate, isActive } from "@/lib/format";
-import { ideaStatus } from "@/lib/ideas";
+import {
+  CONTRIBUTIONS_SQL,
+  EVENTS_SQL,
+  IDEAS_SQL,
+  RESERVE_COUNTS_SQL,
+  ideaStatus,
+  sortForGiver,
+} from "@/lib/ideas";
 import { getSession } from "@/lib/session";
-import type { Contribution, EventRow } from "@/lib/types";
+import type { Contribution, EventRow, Idea } from "@/lib/types";
 
+/**
+ * Accueil = « offrir un cadeau » : toutes les idées des événements à venir,
+ * directement avec le bouton « Je le prends ».
+ */
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
-  const { supabase, me, member } = await getSession();
+  const { tx, me, member, children, isParentOf } = await getSession();
 
-  const { data: evs } = await supabase
-    .from("events")
-    .select("id, name, event_date, created_by, event_beneficiaries(member_id)")
-    .order("event_date");
-  const events = (evs ?? []) as EventRow[];
+  const { events, ideas, contributions, reserve, chosen, viewable } = await tx(async (q) => ({
+    viewable: new Set(
+      (
+        await q<{ member_id: string }>(
+          `select distinct b.member_id from event_beneficiaries b join events e on e.id = b.event_id
+           where e.event_date >= current_date and can_view_list(b.member_id)`,
+        )
+      ).map((r) => r.member_id),
+    ),
+    events: await q<EventRow>(`${EVENTS_SQL} order by e.event_date`),
+    // Idées des autres sur les événements à venir (la base ne renvoie que les listes partagées avec moi)
+    ideas: await q<Idea>(
+      `${IDEAS_SQL}
+       where i.beneficiary_id <> $1
+         and i.event_id in (select id from events where event_date >= current_date)`,
+      [me.id],
+    ),
+    contributions: await q<Contribution>(
+      `${CONTRIBUTIONS_SQL} where event_id in (select id from events where event_date >= current_date)`,
+    ),
+    reserve: (await q<{ n: number }>(RESERVE_COUNTS_SQL, [[me.id, ...children.map((c) => c.id)]])).reduce(
+      (s, r) => s + r.n,
+      0,
+    ),
+    chosen: (
+      await q<{ n: number }>(
+        `select count(*)::int as n from contributions c join events e on e.id = c.event_id
+         where c.member_id = $1 and e.event_date >= current_date`,
+        [me.id],
+      )
+    )[0].n,
+  }));
   const upcoming = events.filter((e) => isActive(e.event_date));
   const past = events.filter((e) => !isActive(e.event_date)).reverse();
-
-  // Nombre d'idées encore disponibles pour moi sur chaque événement à venir
-  const ids = upcoming.map((e) => e.id);
-  const [{ data: ideas }, { data: contribs }] = ids.length
-    ? await Promise.all([
-        supabase.from("ideas").select("id, event_id, beneficiary_id").in("event_id", ids).neq("beneficiary_id", me.id),
-        supabase.from("contributions").select("idea_id, event_id, member_id, percent").in("event_id", ids),
-      ])
-    : [{ data: [] }, { data: [] }];
-  const contributions = (contribs ?? []) as Contribution[];
-  const stats = (eventId: string) => {
-    const list = (ideas ?? []).filter((i) => i.event_id === eventId);
-    const st = list.map((i) => ideaStatus(i.id, eventId, contributions, me.id));
-    return { free: st.filter((s) => s.total < 100).length, mine: st.filter((s) => s.mine > 0).length };
-  };
+  const status = (i: Idea) => ideaStatus(i.id, i.event_id, contributions, me.id);
+  const isTaken = (i: Idea) => status(i).total >= 100 && status(i).mine === 0;
 
   return (
     <>
-      <PageHeader
-        title={sp.bienvenue ? `Bienvenue ${me.display_name} 🎉` : `Bonjour ${me.display_name} 👋`}
-        subtitle="Choisis un événement pour voir les listes et réserver un cadeau."
-      />
-
-      <div className="mb-8 grid grid-cols-2 gap-3">
-        <Link href={`/listes/${me.id}`} className="card flex flex-col gap-1 p-4 transition hover:border-brand-200 hover:shadow-md">
-          <span className="text-2xl">📝</span>
-          <span className="font-extrabold">Ma liste</span>
-          <span className="text-xs text-muted">Ajouter mes idées</span>
-        </Link>
-        {me.is_child ? (
-          <Link href="/mes-cadeaux" className="card flex flex-col gap-1 p-4 transition hover:border-brand-200 hover:shadow-md">
-            <span className="text-2xl">🎁</span>
-            <span className="font-extrabold">Mes cadeaux</span>
-            <span className="text-xs text-muted">Ce que j&apos;offre</span>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-extrabold tracking-tight">
+          {sp.bienvenue ? `Bienvenue ${me.display_name} 🎉` : `Bonjour ${me.display_name} 👋`}
+        </h1>
+        <div className="flex gap-2">
+          <Link href={`/listes/${me.id}`} className="btn-secondary py-2 text-xs">
+            📝 {children.length ? "Nos listes" : "Ma liste"}
+            {reserve > 0 && <span className="rounded-full bg-amber-100 px-1.5 text-amber-800">📦 {reserve}</span>}
           </Link>
-        ) : (
-          <Link href="/evenements/nouveau" className="card flex flex-col gap-1 p-4 transition hover:border-brand-200 hover:shadow-md">
-            <span className="text-2xl">📅</span>
-            <span className="font-extrabold">Nouvel événement</span>
-            <span className="text-xs text-muted">Noël, anniversaire…</span>
+          <Link href="/mes-cadeaux" className="btn-secondary py-2 text-xs">
+            🎁 Mes cadeaux
+            {chosen > 0 && <span className="rounded-full bg-emerald-100 px-1.5 text-emerald-800">{chosen}</span>}
           </Link>
-        )}
+        </div>
       </div>
 
-      <Section title="Événements à venir">
-        {upcoming.length === 0 ? (
-          <Empty icon="📅">
-            Aucun événement pour l&apos;instant.
-            {!me.is_child && (
-              <div className="mt-3">
-                <Link href="/evenements/nouveau" className="btn-primary">Créer un événement</Link>
-              </div>
+      {upcoming.length === 0 && (
+        <Empty icon="📅">
+          Aucun événement à venir.
+          {!me.is_child && (
+            <div className="mt-3">
+              <Link href="/evenements/nouveau" className="btn-primary">Créer un événement</Link>
+            </div>
+          )}
+        </Empty>
+      )}
+
+      {upcoming.map((e) => {
+        const eventIdeas = ideas.filter((i) => i.event_id === e.id);
+        // Les personnes de l'événement (sauf moi) dont je vois la liste
+        const people = (e.event_beneficiaries ?? [])
+          .map((b) => member(b.member_id))
+          .filter((m): m is NonNullable<typeof m> => !!m && m.id !== me.id && viewable.has(m.id))
+          .sort((a, b) => a.display_name.localeCompare(b.display_name));
+        const taken = sortForGiver(eventIdeas.filter(isTaken), contributions, me.id);
+        const back = (pid: string) => `/#e${e.id.slice(0, 8)}-${pid.slice(0, 8)}`;
+
+        return (
+          <section key={e.id} className="mb-10">
+            <div className="sticky top-14 z-20 -mx-4 mb-4 flex items-baseline justify-between gap-3 border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur">
+              <h2 className="truncate text-lg font-extrabold">
+                {e.name} <span className="text-sm font-bold text-brand-600">· {formatCountdown(e.event_date)}</span>
+              </h2>
+              <Link href={`/evenements/${e.id}`} className="shrink-0 text-xs font-bold text-muted hover:text-ink">
+                Détails ›
+              </Link>
+            </div>
+
+            {people.length === 0 && (
+              <p className="text-sm text-muted">Aucune liste à consulter pour cet événement.</p>
             )}
-          </Empty>
-        ) : (
-          <ul className="space-y-3">
-            {upcoming.map((e) => {
-              const s = stats(e.id);
-              const people = (e.event_beneficiaries ?? []).map((b) => member(b.member_id)).filter(Boolean);
-              const others = people.filter((p) => p!.id !== me.id);
+
+            {people.map((p) => {
+              const list = sortForGiver(
+                eventIdeas.filter((i) => i.beneficiary_id === p.id && !isTaken(i)),
+                contributions,
+                me.id,
+              );
+              const hasList = eventIdeas.some((i) => i.beneficiary_id === p.id);
+              const suggestHref = `/idees/nouvelle?pour=${p.id}&evenement=${e.id}&back=${encodeURIComponent(back(p.id))}`;
               return (
-                <li key={e.id}>
-                  <Link href={`/evenements/${e.id}`} className="card flex items-center gap-4 p-4 transition hover:border-brand-200 hover:shadow-md">
-                    <div className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-                      <span className="text-lg font-extrabold leading-none">{e.event_date.slice(8, 10)}</span>
-                      <span className="text-[10px] font-bold uppercase">
-                        {new Intl.DateTimeFormat("fr-FR", { month: "short", timeZone: "UTC" }).format(new Date(e.event_date))}
-                      </span>
+                <div key={p.id} id={back(p.id).slice(2)} className="mb-6 scroll-mt-28">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Avatar member={p} size="sm" />
+                    <h3 className="flex-1 font-extrabold">Pour {p.display_name}</h3>
+                    <Link href={suggestHref} className="text-xs font-bold text-muted hover:text-brand-600">
+                      {isParentOf(p.id) ? "+ Ajouter" : "+ Suggérer"}
+                    </Link>
+                  </div>
+                  {list.length > 0 ? (
+                    <div className="space-y-3">
+                      {list.map((idea) => (
+                        <IdeaCard
+                          key={idea.id}
+                          idea={idea}
+                          mode="giver"
+                          status={status(idea)}
+                          open
+                          canEdit={idea.is_secret && idea.created_by === me.id && !isParentOf(p.id)}
+                          back={back(p.id)}
+                          member={member}
+                        />
+                      ))}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="truncate font-extrabold">{e.name}</h3>
-                        <span className="shrink-0 text-xs font-bold text-brand-600">{formatCountdown(e.event_date)}</span>
-                      </div>
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <div className="flex -space-x-2">
-                          {people.slice(0, 6).map((p) => <Avatar key={p!.id} member={p} size="sm" />)}
-                        </div>
-                        {others.length > 0 && (
-                          <span className="truncate text-xs font-semibold text-muted">
-                            {s.free} idée{s.free > 1 ? "s" : ""} dispo
-                            {s.mine > 0 && ` · ${s.mine} choisie${s.mine > 1 ? "s" : ""} par toi`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="text-muted">›</span>
-                  </Link>
-                </li>
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-line px-4 py-3 text-sm text-muted">
+                      {hasList ? "🎉 Tout est déjà choisi." : "Pas encore d'idée."}
+                    </p>
+                  )}
+                </div>
               );
             })}
-          </ul>
-        )}
-      </Section>
 
-      {past.length > 0 && (
-        <details className="mb-10">
-          <summary className="cursor-pointer text-sm font-bold text-muted hover:text-ink">
-            Événements passés ({past.length}) ▾
-          </summary>
-          <ul className="mt-3 space-y-2">
-            {past.map((e) => (
-              <li key={e.id}>
-                <Link href={`/evenements/${e.id}`} className="flex justify-between rounded-xl px-3 py-2 text-sm hover:bg-white">
-                  <span className="font-bold">{e.name}</span>
-                  <span className="text-muted">{formatDate(e.event_date)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+            {taken.length > 0 && (
+              <details>
+                <summary className="cursor-pointer text-sm font-bold text-muted hover:text-ink">
+                  Déjà choisies par d&apos;autres ({taken.length}) ▾
+                </summary>
+                <ul className="mt-2 space-y-1 text-sm text-muted">
+                  {taken.map((i) => (
+                    <li key={i.id} className="flex items-center gap-2">
+                      <Avatar member={member(i.beneficiary_id)} size="sm" />
+                      <span className="line-through">{i.title}</span>
+                      <span className="text-xs">
+                        ({status(i).others.map((c) => member(c.member_id)?.display_name).join(", ")})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </section>
+        );
+      })}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-sm">
+        {!me.is_child && (
+          <Link href="/evenements/nouveau" className="font-bold text-brand-600 hover:underline">+ Nouvel événement</Link>
+        )}
+        {past.length > 0 && (
+          <details>
+            <summary className="cursor-pointer font-bold text-muted hover:text-ink">Événements passés ({past.length}) ▾</summary>
+            <ul className="mt-2">
+              {past.map((e) => (
+                <li key={e.id}>
+                  <Link href={`/evenements/${e.id}`} className="flex justify-between gap-4 rounded-xl px-3 py-1.5 hover:bg-white">
+                    <span className="font-bold">{e.name}</span>
+                    <span className="text-muted">{formatDate(e.event_date)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
     </>
   );
 }
