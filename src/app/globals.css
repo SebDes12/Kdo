@@ -18,21 +18,21 @@
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Thème « Sapin & cuivre » : vert sapin, cuivre et touches dorées sur fond crème */
+/* Thème « Mauve argenté » : aubergine grisé, boutons mauve, touches argentées */
 :root {
-  --brand-50: #fbf1ea;
-  --brand-100: #f6dfcf;
-  --brand-200: #ecc0a1;
-  --brand-500: #d06a36;
-  --brand-600: #b4532a;
-  --brand-700: #8f3f1f;
-  --band: #173f2f;
-  --band-ink: #fdf8ec;
-  --accent: #e9c46a;
-  --ink: #1b1f1a;
-  --muted: #555248;
-  --line: #ddd6c8;
-  --paper: #f7f4ec;
+  --brand-50: #f3effa;
+  --brand-100: #e7def5;
+  --brand-200: #d2c3ec;
+  --brand-500: #9479c4;
+  --brand-600: #7b5ea7;
+  --brand-700: #5f4787;
+  --band: #4a3657;
+  --band-ink: #f4f2f8;
+  --accent: #cfcfdc;
+  --ink: #1e1b24;
+  --muted: #5b5866;
+  --line: #d9d6e2;
+  --paper: #f6f5f9;
 }
 
 html {

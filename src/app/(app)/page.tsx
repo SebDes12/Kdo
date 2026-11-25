@@ -262,6 +262,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 /** Teintes alternées des zones d'événement sur l'accueil. */
 const ZONES = [
   { zone: "bg-band/[0.05] border-band", band: "band", accent: "text-accent", chip: "band" },
-  { zone: "bg-red-50/70 border-[#7f1d1d]", band: "bg-[#7f1d1d] text-white", accent: "text-amber-200", chip: "bg-[#7f1d1d] text-white" },
-  { zone: "bg-sky-50/70 border-[#1e3a5f]", band: "bg-[#1e3a5f] text-white", accent: "text-amber-200", chip: "bg-[#1e3a5f] text-white" },
+  { zone: "bg-[#6e6a7d]/[0.07] border-[#6e6a7d]", band: "bg-[#6e6a7d] text-white", accent: "text-[#e4e4ee]", chip: "bg-[#6e6a7d] text-white" },
+  { zone: "bg-[#8a6f9e]/[0.07] border-[#8a6f9e]", band: "bg-[#8a6f9e] text-white", accent: "text-[#f1ecf6]", chip: "bg-[#8a6f9e] text-white" },
 ];
