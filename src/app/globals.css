@@ -18,21 +18,21 @@
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Thème « Nuit » : bleu nuit, corail et touches dorées */
+/* Thème « Sapin & cuivre » : vert sapin, cuivre et touches dorées sur fond crème */
 :root {
-  --brand-50: #fff1f2;
-  --brand-100: #ffe4e6;
-  --brand-200: #fecdd3;
-  --brand-500: #f43f5e;
-  --brand-600: #e11d48;
-  --brand-700: #be123c;
-  --band: #1e1b4b;
-  --band-ink: #ffffff;
-  --accent: #fbbf24;
-  --ink: #111827;
-  --muted: #4b5563;
-  --line: #d4d4e2;
-  --paper: #f4f4fa;
+  --brand-50: #fbf1ea;
+  --brand-100: #f6dfcf;
+  --brand-200: #ecc0a1;
+  --brand-500: #d06a36;
+  --brand-600: #b4532a;
+  --brand-700: #8f3f1f;
+  --band: #173f2f;
+  --band-ink: #fdf8ec;
+  --accent: #e9c46a;
+  --ink: #1b1f1a;
+  --muted: #555248;
+  --line: #ddd6c8;
+  --paper: #f7f4ec;
 }
 
 html {
