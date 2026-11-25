@@ -128,8 +128,8 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         const back = (pid: string) => `/#e${e.id.slice(0, 8)}-${pid.slice(0, 8)}`;
 
         return (
-          <section key={e.id} id={`evt-${e.id}`} className={`-mx-2 mb-12 scroll-mt-20 rounded-3xl p-2 ring-1 sm:mx-0 sm:p-3 ${zone.zone}`}>
-            <div className={`mb-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3 shadow-sm ${zone.band}`}>
+          <section key={e.id} id={`evt-${e.id}`} className={`-mx-4 mb-12 scroll-mt-20 border-y-2 sm:mx-0 sm:border-2 ${zone.zone}`}>
+            <div className={`flex items-center justify-between gap-3 px-4 py-3 ${zone.band}`}>
               <h2 className="min-w-0 truncate text-lg font-extrabold">
                 🎁 {e.name} <span className={`text-sm font-bold ${zone.accent}`}>· {eventCountdown(e)}</span>
               </h2>
@@ -137,6 +137,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 Détails ›
               </Link>
             </div>
+            <div className="p-3 sm:p-4">
 
             {myEvents.has(e.id) && (
               <div className="mb-4 flex items-stretch overflow-hidden rounded-xl border-2 border-dashed border-line bg-white/70 text-sm">
@@ -229,6 +230,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 </ul>
               </details>
             )}
+            </div>
           </section>
         );
       })}
@@ -259,7 +261,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
 /** Teintes alternées des zones d'événement sur l'accueil. */
 const ZONES = [
-  { zone: "bg-band/[0.06] ring-band/15", band: "band", accent: "text-accent", chip: "band" },
-  { zone: "bg-amber-100/70 ring-amber-300/60", band: "bg-amber-800 text-white", accent: "text-amber-200", chip: "bg-amber-800 text-white" },
-  { zone: "bg-brand-50 ring-brand-200", band: "bg-brand-700 text-white", accent: "text-brand-100", chip: "bg-brand-700 text-white" },
+  { zone: "bg-band/[0.05] border-band", band: "band", accent: "text-accent", chip: "band" },
+  { zone: "bg-red-50/70 border-[#7f1d1d]", band: "bg-[#7f1d1d] text-white", accent: "text-amber-200", chip: "bg-[#7f1d1d] text-white" },
+  { zone: "bg-sky-50/70 border-[#1e3a5f]", band: "bg-[#1e3a5f] text-white", accent: "text-amber-200", chip: "bg-[#1e3a5f] text-white" },
 ];
