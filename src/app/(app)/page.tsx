@@ -129,7 +129,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
         return (
           <section key={e.id} id={`evt-${e.id}`} className={`-mx-4 mb-12 scroll-mt-20 border-y-2 sm:mx-0 sm:border-2 ${zone.zone}`}>
-            <div className={`flex items-center justify-between gap-3 px-4 py-3 ${zone.band}`}>
+            <div className={`flex items-center justify-between gap-3 border-b-[3px] border-accent px-4 py-3 ${zone.band}`}>
               <h2 className="min-w-0 truncate text-lg font-extrabold">
                 🎁 {e.name} <span className={`text-sm font-bold ${zone.accent}`}>· {eventCountdown(e)}</span>
               </h2>
@@ -175,7 +175,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                   id={back(p.id).slice(2)}
                   className="mb-4 scroll-mt-20 overflow-hidden rounded-2xl border-2 border-line bg-white shadow-md"
                 >
-                  <div className="flex items-center gap-2 border-b-2 border-brand-100 bg-brand-50 px-3 py-2.5">
+                  <div className="flex items-center gap-2 border-b-2 border-accent bg-brand-50 px-3 py-2.5">
                     <Avatar member={p} />
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate text-lg font-extrabold text-brand-700">Pour {p.display_name}</h3>

@@ -102,7 +102,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
     <>
       <header className="mb-5">
         <Link href="/" className="mb-2 inline-flex text-sm font-semibold text-muted hover:text-ink">← Accueil</Link>
-        <div className="band flex items-start justify-between gap-3 rounded-2xl p-5 shadow-sm">
+        <div className="band flex items-start justify-between gap-3 rounded-2xl border-b-[3px] border-accent p-5 shadow-sm">
           <div className="min-w-0">
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">🎁 {event.name}</h1>
             <p className="text-sm text-band-ink/85">
@@ -147,7 +147,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
               scroll={false}
               aria-current={active ? "page" : undefined}
               className={`flex shrink-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm font-bold transition ${
-                active ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-white hover:border-brand-200"
+                active ? "border-brand-600 bg-brand-600 text-white ring-2 ring-accent" : "border-line bg-white hover:border-brand-200"
               }`}
             >
               <Avatar member={p} size="sm" />

@@ -18,17 +18,21 @@
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Thème « Mauve argenté » : aubergine grisé, boutons mauve, touches argentées */
+/* Thème « Mauve & or » : aubergine grisé, mauve, et or pour les touches et les boutons */
 :root {
-  --brand-50: #f3effa;
-  --brand-100: #e7def5;
+  --brand-50: #fcf7ea;
+  --brand-100: #f7ecd0;
   --brand-200: #d2c3ec;
   --brand-500: #9479c4;
   --brand-600: #7b5ea7;
   --brand-700: #5f4787;
   --band: #4a3657;
   --band-ink: #f4f2f8;
-  --accent: #cfcfdc;
+  /* Or : touches, filets et boutons principaux */
+  --accent: #d4a83a;
+  --gold-light: #e2bb55;
+  --gold-dark: #b88a1e;
+  --gold-ink: #2b1f33;
   --ink: #1e1b24;
   --muted: #5b5866;
   --line: #d9d6e2;
@@ -52,7 +56,9 @@ body {
     disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98];
 }
 @utility btn-primary {
-  @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700;
+  @apply btn shadow-sm hover:brightness-95;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold-dark));
+  color: var(--gold-ink);
 }
 @utility btn-secondary {
   @apply btn border-2 border-line bg-white text-ink hover:border-brand-200 hover:bg-brand-50;

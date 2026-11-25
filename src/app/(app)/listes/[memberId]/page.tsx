@@ -66,7 +66,7 @@ export default async function ListPage({ params }: PageProps<"/listes/[memberId]
               href={`/listes/${m.id}`}
               aria-current={m.id === owner.id ? "page" : undefined}
               className={`flex shrink-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm font-bold ${
-                m.id === owner.id ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-white hover:border-brand-200"
+                m.id === owner.id ? "border-brand-600 bg-brand-600 text-white ring-2 ring-accent" : "border-line bg-white hover:border-brand-200"
               }`}
             >
               <Avatar member={m} size="sm" />
