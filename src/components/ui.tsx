@@ -24,7 +24,7 @@ export function Avatar({ member, size = "md" }: { member?: Pick<Member, "id" | "
   return (
     <span
       title={member.display_name}
-      className={`${dims} ${colorFor(member.id)} inline-flex shrink-0 items-center justify-center rounded-full font-extrabold ring-2 ring-white`}
+      className={`${dims} ${colorFor(member.id)} inline-flex shrink-0 items-center justify-center rounded-full font-extrabold ring-2 ring-accent`}
     >
       {member.display_name.slice(0, 1).toUpperCase()}
     </span>

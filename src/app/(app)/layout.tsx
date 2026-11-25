@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Suspense>
         <Flash />
       </Suspense>
-      <header className="band sticky top-0 z-30 shadow-md">
+      <header className="band sticky top-0 z-30 border-b-[3px] border-accent shadow-md">
         <div className="mx-auto flex h-14 max-w-3xl items-center gap-4 px-4">
           <Link href="/" className="flex items-center gap-2 text-lg font-extrabold">
             {/* eslint-disable-next-line @next/next/no-img-element */}
