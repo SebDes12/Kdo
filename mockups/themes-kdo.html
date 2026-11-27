@@ -1,0 +1,254 @@
+<title>Thèmes Kdo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap">
+<style>
+/* Mise en page : une rangée de téléphones (un par thème), puis l'incitation Noël et le réglage du compte. */
+:root {
+  --shell-bg: #efedf3;
+  --shell-fg: #1e1b24;
+  --shell-muted: #5d5967;
+  --shell-line: #d8d4e0;
+  --shell-card: #ffffff;
+  --shell-pick: #7b5ea7;
+  --font: "Nunito", ui-sans-serif, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --shell-bg: #17151c; --shell-fg: #eeeaf4; --shell-muted: #a8a2b4; --shell-line: #36323f; --shell-card: #211e28; --shell-pick: #c0a8ea; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --shell-bg: #17151c; --shell-fg: #eeeaf4; --shell-muted: #a8a2b4; --shell-line: #36323f; --shell-card: #211e28; --shell-pick: #c0a8ea; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--shell-bg); color: var(--shell-fg); font-family: var(--font); font-size: 15px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; }
+h1 { font-size: 28px; font-weight: 900; margin: 0 0 6px; text-wrap: balance; letter-spacing: -0.01em; }
+h2.sec { font-size: 20px; font-weight: 900; margin: 48px 0 4px; text-wrap: balance; }
+.lede { color: var(--shell-muted); margin: 0; max-width: 68ch; line-height: 1.5; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 28px 22px; margin-top: 24px; }
+.opt { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.opt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.opt-name { font-size: 17px; font-weight: 900; }
+.opt-tag { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--shell-muted); }
+.opt-desc { font-size: 13px; color: var(--shell-muted); margin: 0; line-height: 1.45; min-height: 3.6em; }
+.swatches { display: flex; gap: 6px; }
+.sw { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(0,0,0,.12); }
+.pick { font: inherit; font-weight: 800; font-size: 14px; border: 2px solid var(--shell-line); background: var(--shell-card); color: var(--shell-fg); border-radius: 12px; padding: 9px 12px; cursor: pointer; }
+.pick:hover { border-color: var(--shell-pick); }
+.pick:focus-visible, .mini:focus-visible { outline: 3px solid var(--shell-pick); outline-offset: 2px; }
+.opt.chosen .pick { background: var(--shell-pick); border-color: var(--shell-pick); color: var(--shell-card); }
+.opt.chosen .phone { outline: 4px solid var(--shell-pick); outline-offset: 4px; }
+
+/* ---------- Le téléphone (couleurs du thème uniquement) ---------- */
+.phone {
+  --radius: 14px;
+  border-radius: 28px; overflow: hidden; background: var(--paper); color: var(--ink);
+  border: 8px solid #111; box-shadow: 0 10px 30px rgba(0,0,0,.18);
+  display: flex; flex-direction: column; height: 640px; position: relative;
+}
+.p-head { background: var(--band); color: var(--band-ink); display: flex; align-items: center; gap: 8px; padding: 12px 12px; position: relative; }
+.p-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px; background: var(--accent-line, var(--accent)); }
+.logo { width: 26px; height: 26px; border-radius: 7px; background: var(--logo-bg); display: grid; place-items: center; flex: none; }
+.logo svg { width: 18px; height: 18px; }
+.brand { font-weight: 900; font-size: 17px; }
+.who { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 800; }
+.av { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--band-edge, var(--band)); display: grid; place-items: center; font-size: 11px; font-weight: 900; }
+.p-main { flex: 1; overflow: hidden; padding: 16px 0 0; }
+.hello { padding: 0 14px; font-size: 20px; font-weight: 900; margin: 0 0 12px; letter-spacing: -0.01em; }
+.chips { display: flex; gap: 6px; padding: 0 14px 12px; overflow: hidden; }
+.chip { flex: none; border-radius: 999px; padding: 5px 10px; font-size: 11.5px; font-weight: 800; background: var(--band); color: var(--band-ink); }
+.chip.alt { background: var(--chip2); color: var(--chip2-ink); }
+.zone { border-block: 2px solid var(--band-edge, var(--band)); background: var(--zone); }
+.z-head { background: var(--band); color: var(--band-ink); padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; position: relative; }
+.z-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px; background: var(--accent-line, var(--accent)); }
+.z-title { font-weight: 900; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.z-title span { color: var(--accent-text, var(--accent)); font-size: 12px; font-weight: 800; }
+.z-more { font-size: 11px; font-weight: 800; opacity: .85; }
+.z-body { padding: 13px 10px 12px; }
+.person { background: #fff; border: 2px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: 0 3px 8px rgba(0,0,0,.07); }
+.pp-head { background: var(--brand-50); border-bottom: 2px solid var(--accent); padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
+.pp-av { width: 28px; height: 28px; border-radius: 50%; background: var(--brand-600); color: #fff; display: grid; place-items: center; font-weight: 900; font-size: 12px; flex: none; }
+.pp-name { font-weight: 900; color: var(--brand-700); font-size: 15px; }
+.pp-sub { font-size: 11px; color: var(--muted); font-weight: 700; }
+.idea { padding: 10px 11px; display: flex; flex-direction: column; gap: 5px; }
+.idea + .idea { border-top: 2px solid var(--line); }
+.i-row { display: flex; gap: 8px; align-items: flex-start; }
+.i-title { font-weight: 900; font-size: 14px; flex: 1; line-height: 1.25; }
+.i-title .stars { color: #f59e0b; font-size: 12px; }
+.i-price { font-size: 12.5px; font-weight: 800; color: var(--muted); }
+.i-desc { font-size: 12px; color: #57534e; margin: 0; line-height: 1.35; }
+.i-link { font-size: 12px; font-weight: 800; color: var(--link, var(--brand-600)); }
+.i-actions { display: flex; gap: 6px; margin-top: 3px; }
+.b { font: inherit; font-size: 12px; font-weight: 800; border-radius: 10px; padding: 6px 10px; border: 0; }
+.b-primary { background: linear-gradient(180deg, var(--btn-from), var(--btn-to)); color: var(--btn-ink); box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+.b-second { background: #fff; color: var(--ink); border: 2px solid var(--line); padding: 4px 9px; }
+.taken { font-size: 11.5px; font-weight: 800; color: #047857; background: #ecfdf5; border-radius: 8px; padding: 3px 7px; align-self: flex-start; }
+
+/* Barre du bas : couleurs du bandeau, l'onglet actif dans une pastille d'accent */
+.p-nav { background: var(--nav-bg, var(--band)); color: var(--band-ink); position: relative; display: flex; justify-content: space-around; padding: 8px 6px 11px; font-size: 10.5px; font-weight: 800; }
+.p-nav::before { content: ""; position: absolute; left: 0; right: 0; top: -3px; height: 3px; background: var(--accent-line, var(--accent)); }
+.p-nav span { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 9px 3px; border-radius: 14px; opacity: .8; }
+.p-nav .on { opacity: 1; background: var(--nav-on-bg, var(--accent)); color: var(--nav-on-ink, var(--band-edge, var(--band))); box-shadow: 0 2px 6px rgba(0,0,0,.18); transform: translateY(-2px); }
+.p-nav i { font-style: normal; font-size: 16px; }
+
+/* Carte d'incitation Noël (sur l'accueil, en hiver) */
+.nudge { margin: 0 12px 14px; border-radius: 16px; overflow: hidden; border: 2px solid #d4a83a; background: #fffaf0; color: #1f1a17; box-shadow: 0 4px 12px rgba(164,22,26,.15); }
+.nudge-top { height: 44px; position: relative; background-color: #a4161a;
+  background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,.6) 0 1.4px, transparent 2px), radial-gradient(circle at 70% 70%, rgba(255,255,255,.45) 0 1.1px, transparent 1.6px);
+  background-size: 34px 26px, 28px 22px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #fff8ee; font-weight: 900; font-size: 14px; }
+.nudge-top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #d4a83a; }
+.nudge-body { padding: 10px 12px 12px; font-size: 12.5px; line-height: 1.4; }
+.nudge-body p { margin: 0 0 9px; }
+.nudge-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.nb-yes { background: linear-gradient(180deg,#d62828,#9d0208); color: #fff; }
+.nb-no { background: transparent; color: #5e554b; padding: 6px 6px; }
+.toast { position: absolute; left: 12px; right: 12px; bottom: 74px; background: #1f1a17; color: #fff; border-radius: 12px; padding: 9px 12px; font-size: 12.5px; font-weight: 800; display: flex; justify-content: space-between; gap: 8px; box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+.toast b { color: #f2c94c; }
+
+/* ---------- Les 6 thèmes ---------- */
+.t-nuit { --band:#1e1b4b; --band-ink:#fff; --accent:#fbbf24; --brand-50:#fff1f2; --brand-600:#e11d48; --brand-700:#be123c; --btn-from:#f43f5e; --btn-to:#e11d48; --btn-ink:#fff; --paper:#f4f4fa; --ink:#111827; --muted:#4b5563; --line:#d4d4e2; --zone:rgba(30,27,75,.05); --chip2:#e11d48; --chip2-ink:#fff; --logo-bg:#e11d48; }
+.t-sapin { --band:#173f2f; --band-ink:#fdf8ec; --accent:#e9c46a; --brand-50:#fbf1ea; --brand-600:#b4532a; --brand-700:#8f3f1f; --btn-from:#d06a36; --btn-to:#b4532a; --btn-ink:#fff; --paper:#f7f4ec; --ink:#1b1f1a; --muted:#555248; --line:#ddd6c8; --zone:rgba(23,63,47,.05); --chip2:#b4532a; --chip2-ink:#fff; --logo-bg:#b4532a; }
+.t-argent { --band:#4a3657; --band-ink:#f4f2f8; --accent:#cfcfdc; --brand-50:#f3effa; --brand-600:#7b5ea7; --brand-700:#5f4787; --btn-from:#9479c4; --btn-to:#7b5ea7; --btn-ink:#fff; --paper:#f6f5f9; --ink:#1e1b24; --muted:#5b5866; --line:#d9d6e2; --zone:rgba(74,54,87,.05); --chip2:#6e6a7d; --chip2-ink:#fff; --logo-bg:#7b5ea7; }
+.t-or { --band:#4a3657; --band-ink:#f4f2f8; --accent:#d4a83a; --brand-50:#fcf7ea; --brand-600:#7b5ea7; --brand-700:#5f4787; --btn-from:#e2bb55; --btn-to:#b88a1e; --btn-ink:#2b1f33; --paper:#f6f5f9; --ink:#1e1b24; --muted:#5b5866; --line:#d9d6e2; --zone:rgba(74,54,87,.05); --chip2:#6e6a7d; --chip2-ink:#fff; --logo-bg:#7b5ea7; --nav-on-ink:#2b1f33; }
+/* Sunset : coucher de soleil sur la plage, plein jour et couleurs pastel saturées */
+.t-sunset { --band:linear-gradient(100deg,#3b1a8b 0%,#7b2cbf 38%,#c9349b 70%,#f33a7b 100%); --band-edge:#7b2cbf; --band-ink:#fff; --accent:#ffc94d; --accent-line:linear-gradient(90deg,#f8735a,#ff9f43 50%,#ffc94d); --accent-text:#ffc94d; --brand-50:#fff0f3; --brand-600:#c9349b; --brand-700:#7b2cbf; --link:#c9349b; --btn-from:#ff9f43; --btn-to:#f33a7b; --btn-ink:#fff; --paper:#fff6ef; --ink:#241238; --muted:#6e5470; --line:#f5d6d6; --zone:rgba(123,44,191,.06); --chip2:#ff9f43; --chip2-ink:#3b1a8b; --logo-bg:linear-gradient(135deg,#ff9f43,#f33a7b); --nav-on-bg:#ffc94d; --nav-on-ink:#3b1a8b; }
+.t-sunset .p-head, .t-sunset .z-head, .t-sunset .p-nav { text-shadow: 0 1px 2px rgba(40,10,80,.3); }
+.t-sunset .pp-head { background: linear-gradient(90deg,#fff0f3,#fff4e6); }
+.t-noel { --band:#a4161a; --band-ink:#fff8ee; --accent:#d4a83a; --brand-50:#eef6f0; --brand-600:#1f6f43; --brand-700:#165233; --btn-from:#d62828; --btn-to:#9d0208; --btn-ink:#fff; --paper:#fbf7ef; --ink:#1f1a17; --muted:#5e554b; --line:#e6dccb; --zone:rgba(164,22,26,.05); --chip2:#1f6f43; --chip2-ink:#fff; --logo-bg:#1f6f43; --nav-on-ink:#5a0d0f; }
+.t-noel .p-head, .t-noel .z-head, .t-noel .p-nav {
+  background-color: #a4161a;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.55) 0 1.4px, transparent 2px),
+    radial-gradient(circle at 70% 70%, rgba(255,255,255,.4) 0 1.1px, transparent 1.6px),
+    radial-gradient(circle at 45% 85%, rgba(255,255,255,.3) 0 1px, transparent 1.5px);
+  background-size: 46px 34px, 38px 30px, 60px 40px;
+}
+
+/* ---------- Incitation + réglage ---------- */
+.duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-top: 18px; align-items: start; }
+.steps { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.step { background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: 16px; padding: 14px 16px; }
+.step h3 { margin: 0 0 4px; font-size: 15px; font-weight: 900; }
+.step p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--shell-muted); }
+.when { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 800; color: var(--shell-pick); margin-bottom: 2px; }
+.panel { background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: 18px; padding: 18px; min-width: 0; }
+.panel h3 { margin: 0 0 2px; font-size: 16px; font-weight: 900; }
+.panel .where { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 800; color: var(--shell-muted); }
+.minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.mini { position: relative; border: 2px solid var(--shell-line); border-radius: 12px; overflow: hidden; font-size: 11.5px; font-weight: 800; text-align: center; background: var(--shell-card); color: var(--shell-fg); padding: 0 0 6px; cursor: pointer; font-family: inherit; }
+.mini.on { border-color: var(--shell-pick); box-shadow: 0 0 0 2px var(--shell-pick); }
+.mini .mb { height: 22px; background: var(--band); border-bottom: 3px solid var(--accent); }
+.t-sunset .mb { border-image: linear-gradient(90deg,#f8735a,#ff9f43,#ffc94d) 1; }
+.mini .mp { height: 26px; background: var(--paper); display: grid; place-items: center; margin-bottom: 5px; }
+.mini .mbtn { width: 46%; height: 10px; border-radius: 4px; background: linear-gradient(180deg, var(--btn-from), var(--btn-to)); }
+.season { position: absolute; top: 3px; right: 3px; font-size: 9px; font-weight: 900; background: #d4a83a; color: #3a2a05; border-radius: 6px; padding: 1px 5px; }
+@media (max-width: 420px) { .phone { height: 600px; } }
+</style>
+
+<div class="wrap">
+  <h1>Thèmes Kdo</h1>
+  <p class="lede">Les six thèmes sur le même écran d'accueil : une liste pour Noël, deux idées, dont une déjà prise. La barre du bas prend maintenant les couleurs du thème, avec l'onglet actif dans une pastille. Appuyez sur « Je choisis celui-ci » pour comparer, c'est juste une maquette.</p>
+
+  <div class="grid" id="grid"></div>
+
+  <h2 class="sec">Donner envie du thème de Noël, sans l'imposer</h2>
+  <p class="lede">Pas de réglage admin ni de dates à saisir. À l'approche de Noël, Kdo propose le thème une fois, sur l'accueil. Chacun dit oui ou non, et le thème revient tout seul après les fêtes.</p>
+
+  <div class="duo">
+    <div id="nudge-phone"></div>
+    <div class="steps">
+      <div class="step"><div class="when">Quand</div><h3>Dès qu'un événement de Noël approche</h3><p>La carte s'affiche quand un événement de la personne tombe en décembre, ou à défaut à partir du 15 novembre. Elle n'apparaît pas si la personne est déjà en thème Noël.</p></div>
+      <div class="step"><div class="when">« Essayer »</div><h3>Le thème change tout de suite</h3><p>Un message en bas propose « Annuler » pendant quelques secondes. Le thème d'avant est gardé en mémoire.</p></div>
+      <div class="step"><div class="when">« Pas cette année »</div><h3>Plus rien jusqu'à l'hiver prochain</h3><p>La carte disparaît pour la saison. Le thème Noël reste disponible à tout moment dans le compte.</p></div>
+      <div class="step"><div class="when">Après le 6 janvier</div><h3>Retour automatique au thème d'avant</h3><p>Seulement si le Noël avait été activé depuis la carte. Quelqu'un qui choisit Noël lui-même dans son compte le garde.</p></div>
+    </div>
+  </div>
+
+  <h2 class="sec">Dans le compte</h2>
+  <div class="duo">
+    <section class="panel" aria-label="Réglage utilisateur">
+      <div class="where">Compte › Apparence</div>
+      <h3>Thème de l'application</h3>
+      <div class="minis" id="minis"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const THEMES = [
+  { id: "or", name: "Mauve & or", tag: "Actuel", desc: "Aubergine et mauve, boutons dorés. Le thème par défaut aujourd'hui.", sw: ["#4a3657","#7b5ea7","#d4a83a","#f6f5f9"] },
+  { id: "argent", name: "Mauve argenté", tag: "Essai n°3", desc: "Les mêmes mauves avec des touches argent. Plus doux et plus froid.", sw: ["#4a3657","#7b5ea7","#cfcfdc","#f6f5f9"] },
+  { id: "sapin", name: "Sapin & cuivre", tag: "Essai n°2", desc: "Vert forêt, cuivre et or doux sur fond crème. Chaleureux et un peu rétro.", sw: ["#173f2f","#b4532a","#e9c46a","#f7f4ec"] },
+  { id: "nuit", name: "Nuit", tag: "Premier thème", desc: "Indigo profond, framboise et ambre. Le plus contrasté.", sw: ["#1e1b4b","#e11d48","#fbbf24","#f4f4fa"] },
+  { id: "sunset", name: "Sunset", tag: "Nouveau · esprit GTA 6", desc: "La palette de GTA 6 : ciel du violet profond au rose corail, filets orange et jaune chaud, boutons orange-rose.", sw: ["#3b1a8b","#7b2cbf","#c9349b","#f33a7b","#f8735a","#ff9f43","#ffc94d"] },
+  { id: "noel", name: "Noël", tag: "Nouveau · saison", desc: "Rouge Noël et flocons, vert houx et or. Proposé aux utilisateurs à l'approche des fêtes.", sw: ["#a4161a","#1f6f43","#d4a83a","#fbf7ef"] },
+];
+const gift = '<svg viewBox="0 0 64 64"><rect x="13" y="27" width="38" height="25" rx="3" fill="#fff"/><rect x="10" y="19" width="44" height="10" rx="3" fill="#fff"/><rect x="29" y="19" width="6" height="33" fill="#d4a83a"/><path d="M32 19c-3-7-12-9-12-3 0 3 6 3 12 3zm0 0c3-7 12-9 12-3 0 3-6 3-12 3z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></svg>';
+
+function phone(t, opts = {}) {
+  return `<div class="phone t-${t.id}" aria-label="Aperçu du thème ${t.name}">
+    <div class="p-head"><span class="logo">${gift}</span><span class="brand">Kdo</span><span class="who">Sébastien <span class="av">SD</span></span></div>
+    <div class="p-main">
+      <p class="hello">Bonjour Sébastien 👋</p>
+      ${opts.nudge ? `<div class="nudge">
+        <div class="nudge-top">🎄 Noël approche !</div>
+        <div class="nudge-body"><p>Habiller Kdo aux couleurs de Noël jusqu'au 6 janvier ? Vous retrouverez ensuite votre thème.</p>
+          <div class="nudge-actions"><button class="b nb-yes" type="button">Essayer le thème Noël</button><button class="b nb-no" type="button">Pas cette année</button></div>
+        </div></div>` : `<div class="chips"><span class="chip">🎁 Noël 2026 · J-28</span><span class="chip alt">🎂 Anniv. Léa · J-41</span></div>`}
+      <section class="zone">
+        <div class="z-head"><span class="z-title">🎁 Noël 2026 <span>· dans 28 jours</span></span><span class="z-more">Détails ›</span></div>
+        <div class="z-body">
+          <div class="person">
+            <div class="pp-head"><span class="pp-av">L</span><span><span class="pp-name">Pour Léa</span><br><span class="pp-sub">4 idées · 1 déjà prise</span></span></div>
+            <div class="idea">
+              <div class="i-row"><span class="i-title">Coffret aquarelle <span class="stars">★★</span></span><span class="i-price">34 €</span></div>
+              <p class="i-desc">Les 24 couleurs, avec les pinceaux si possible.</p>
+              <span class="i-link">cultura.com ↗</span>
+              <div class="i-actions"><button class="b b-primary" type="button">Je le prends</button><button class="b b-second" type="button">À plusieurs</button></div>
+            </div>
+            <div class="idea">
+              <div class="i-row"><span class="i-title">Lampe lune</span><span class="i-price">22 €</span></div>
+              <span class="taken">✓ Toi, tu l'offres</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    ${opts.toast ? `<div class="toast"><span>🎄 Thème Noël activé</span><b>Annuler</b></div>` : ""}
+    <nav class="p-nav"><span class="on"><i>🏠</i>Accueil</span><span><i>🛍️</i>J'offre</span><span><i>📝</i>Ma liste</span><span><i>👨‍👩‍👧</i>Famille</span></nav>
+  </div>`;
+}
+
+document.getElementById("grid").innerHTML = THEMES.map(t => `<div class="opt" data-id="${t.id}">
+  <div class="opt-head"><span class="opt-name">${t.name}</span><span class="opt-tag">${t.tag}</span></div>
+  <div class="swatches">${t.sw.map(c => `<span class="sw" style="background:${c}"></span>`).join("")}</div>
+  <p class="opt-desc">${t.desc}</p>
+  ${phone(t)}
+  <button class="pick" type="button" id="pick-${t.id}">Je choisis celui-ci</button>
+</div>`).join("");
+
+document.getElementById("nudge-phone").innerHTML = phone(THEMES[0], { nudge: true });
+
+document.getElementById("minis").innerHTML = THEMES.map(t => `<button type="button" class="mini t-${t.id}" data-id="${t.id}" id="mini-${t.id}">${t.id === "noel" ? '<span class="season">De saison</span>' : ""}<div class="mb"></div><div class="mp"><span class="mbtn"></span></div>${t.name}</button>`).join("");
+
+function choose(id) {
+  document.querySelectorAll(".opt").forEach(o => {
+    const on = o.dataset.id === id;
+    o.classList.toggle("chosen", on);
+    o.querySelector(".pick").textContent = on ? "✓ Choisi" : "Je choisis celui-ci";
+  });
+  document.querySelectorAll(".mini").forEach(m => m.classList.toggle("on", m.dataset.id === id));
+  try { localStorage.setItem("kdo-theme-pick", id); } catch (e) {}
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".pick, .mini");
+  if (b) choose(b.closest("[data-id]").dataset.id);
+});
+let saved = "or";
+try { saved = localStorage.getItem("kdo-theme-pick") || "or"; } catch (e) {}
+if (!THEMES.some(t => t.id === saved)) saved = "or";
+choose(saved);
+</script>

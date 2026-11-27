@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { logout, updatePassword } from "@/app/actions/auth";
 import { renameMember } from "@/app/actions/family";
 import { SubmitButton } from "@/components/client";
+import { ThemePicker } from "@/components/theme";
 import { Avatar, PageHeader, Section } from "@/components/ui";
 import { getSession } from "@/lib/session";
 
@@ -28,6 +29,10 @@ export default async function AccountPage() {
           <input name="name" className="field" defaultValue={me.display_name} required maxLength={60} aria-label="Prénom" />
           <SubmitButton className="btn-secondary shrink-0">Enregistrer</SubmitButton>
         </form>
+      </Section>
+
+      <Section title="Apparence">
+        <ThemePicker current={me.theme ?? "or"} />
       </Section>
 
       {!me.is_child && (

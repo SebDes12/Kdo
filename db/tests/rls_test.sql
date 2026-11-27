@@ -464,6 +464,9 @@ select tests.refused(format('select public.emancipate_child(%L)', :M_LEO), 'un e
 select tests.ok(tests.affected(format('update public.members set display_name = ''Léo'' where id = %L', :M_LEO)) = 1,
   'Léo change son nom affiché');
 select tests.refused(format('update public.members set is_child = false where id = %L', :M_LEO), 'Léo modifie is_child');
+select tests.ok(tests.affected(format('update public.members set theme = ''noel'', theme_restore = ''or'' where id = %L', :M_LEO)) = 1,
+  'Léo choisit son thème');
+select tests.refused(format('update public.members set theme = ''rose'' where id = %L', :M_LEO), 'thème inconnu refusé');
 
 select tests.login(:PAPA);
 select public.emancipate_child(:M_LEO);

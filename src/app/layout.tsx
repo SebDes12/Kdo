@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Nunito } from "next/font/google";
+import { DEFAULT_THEME, THEME_COOKIE, isTheme, themeColor } from "@/lib/themes";
 import "./globals.css";
 
 const nunito = Nunito({ variable: "--font-nunito", subsets: ["latin"] });
@@ -10,15 +12,20 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Kdo", statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#4a3657",
-  width: "device-width",
-  initialScale: 1,
-};
+/** Thème enregistré dans le cookie (posé par l'application après le choix de la personne). */
+async function readTheme() {
+  const v = (await cookies()).get(THEME_COOKIE)?.value;
+  return isTheme(v) ? v : DEFAULT_THEME;
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export async function generateViewport(): Promise<Viewport> {
+  return { themeColor: themeColor(await readTheme()), width: "device-width", initialScale: 1 };
+}
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const theme = await readTheme();
   return (
-    <html lang="fr" className={`${nunito.variable} antialiased`}>
+    <html lang="fr" data-theme={theme} className={`${nunito.variable} antialiased`}>
       <body className="font-sans">{children}</body>
     </html>
   );

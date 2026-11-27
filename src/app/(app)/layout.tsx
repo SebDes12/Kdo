@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Flash, NavLinks } from "@/components/client";
+import { ThemeSync } from "@/components/theme";
 import { Avatar } from "@/components/ui";
 import { getSession } from "@/lib/session";
 
@@ -15,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="pb-24 sm:pb-10">
+      <ThemeSync theme={me.theme} restore={me.theme_restore} />
       <Suspense>
         <Flash />
       </Suspense>
@@ -37,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <main className="mx-auto max-w-3xl px-4 pt-6">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t-2 border-line bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur sm:hidden">
+      <nav className="band fixed inset-x-0 bottom-0 z-30 flex border-t-[3px] border-accent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-2px_8px_rgba(0,0,0,0.12)] sm:hidden">
         <NavLinks items={items} />
       </nav>
     </div>

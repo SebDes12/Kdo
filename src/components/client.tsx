@@ -186,8 +186,8 @@ export function NavLinks({
                 ? "bg-white/15 text-band-ink"
                 : "text-band-ink/80 hover:bg-white/10 hover:text-band-ink"
               : isActive(it.href)
-                ? "text-brand-600"
-                : "text-muted hover:text-ink"
+                ? "-translate-y-0.5 bg-accent text-nav-on shadow-md"
+                : "text-band-ink/80 hover:text-band-ink"
           }`}
         >
           <span className="text-xl sm:text-base" aria-hidden>

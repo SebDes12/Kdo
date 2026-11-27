@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { IdeaCard } from "@/components/idea-card";
+import { NoelNudge } from "@/components/theme";
 import { Avatar, Empty } from "@/components/ui";
 import { eventCountdown, formatPeriod, isOpen } from "@/lib/format";
 import {
@@ -75,6 +76,8 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           {sp.bienvenue ? `Bienvenue ${me.display_name} 🎉` : `Bonjour ${me.display_name} 👋`}
         </h1>
       </div>
+
+      <NoelNudge />
 
       {warnings > 0 && (
         <Link
@@ -262,6 +265,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 /** Teintes alternées des zones d'événement sur l'accueil. */
 const ZONES = [
   { zone: "bg-band/[0.05] border-band", band: "band", accent: "text-accent", chip: "band" },
-  { zone: "bg-[#6e6a7d]/[0.07] border-[#6e6a7d]", band: "bg-[#6e6a7d] text-white", accent: "text-[#e4e4ee]", chip: "bg-[#6e6a7d] text-white" },
-  { zone: "bg-[#8a6f9e]/[0.07] border-[#8a6f9e]", band: "bg-[#8a6f9e] text-white", accent: "text-[#f1ecf6]", chip: "bg-[#8a6f9e] text-white" },
+  { zone: "bg-zone2/[0.07] border-zone2", band: "bg-zone2 text-white", accent: "text-white/80", chip: "bg-zone2 text-white" },
+  { zone: "bg-zone3/[0.07] border-zone3", band: "bg-zone3 text-white", accent: "text-white/80", chip: "bg-zone3 text-white" },
 ];
