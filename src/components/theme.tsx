@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { restoreSeasonTheme, saveTheme } from "@/app/actions/theme";
 import { DEFAULT_THEME, THEME_COOKIE, THEMES, isNoelSeason, isTheme, seasonYear, type ThemeId } from "@/lib/themes";
 
@@ -13,6 +13,28 @@ function applyTheme(id: ThemeId) {
 function currentTheme(): ThemeId {
   const v = document.documentElement.dataset.theme;
   return isTheme(v) ? v : DEFAULT_THEME;
+}
+
+/** Thème affiché en ce moment (suit tous les changements, d'où qu'ils viennent). */
+function useTheme(serverTheme: ThemeId): ThemeId {
+  return useSyncExternalStore(
+    (notify) => {
+      const obs = new MutationObserver(notify);
+      obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+      return () => obs.disconnect();
+    },
+    currentTheme,
+    () => serverTheme,
+  );
+}
+
+/** Applique et enregistre un thème choisi par la personne. */
+function useChooseTheme() {
+  const [, startTransition] = useTransition();
+  return (id: ThemeId) => {
+    applyTheme(id);
+    startTransition(() => saveTheme(id, null));
+  };
 }
 
 /**
@@ -40,14 +62,8 @@ export function ThemeSync({ theme, restore }: { theme: ThemeId | null; restore: 
 
 /** Choix du thème dans le compte : vignettes d'aperçu, application immédiate. */
 export function ThemePicker({ current }: { current: ThemeId }) {
-  const [selected, setSelected] = useState<ThemeId>(current);
-  const [, startTransition] = useTransition();
-
-  function choose(id: ThemeId) {
-    setSelected(id);
-    applyTheme(id);
-    startTransition(() => saveTheme(id, null));
-  }
+  const selected = useTheme(current);
+  const choose = useChooseTheme();
 
   return (
     <div className="card p-4">
@@ -170,4 +186,138 @@ export function NoelNudge() {
       )}
     </>
   );
+}
+
+/** Bouton 🎨 de l'en-tête : ouvre directement le choix du thème. */
+export function ThemeMenu({ current }: { current: ThemeId }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = useTheme(current);
+  const choose = useChooseTheme();
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="true"
+        aria-label="Changer de thème"
+        title="Changer de thème"
+        className="flex size-9 items-center justify-center rounded-full text-lg hover:bg-white/10 aria-expanded:bg-white/15"
+      >
+        <span aria-hidden>🎨</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-line bg-white p-2 text-ink shadow-xl">
+          <p className="px-2 pb-1 pt-1 text-xs font-extrabold uppercase tracking-wide text-muted">Thème</p>
+          <ul>
+            {THEMES.map((t) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  data-theme={t.id}
+                  onClick={() => {
+                    choose(t.id);
+                    setOpen(false);
+                  }}
+                  aria-pressed={selected === t.id}
+                  className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left text-sm font-bold hover:bg-brand-50"
+                >
+                  <span className="band block h-7 w-12 shrink-0 rounded-lg border-b-[3px] border-accent" aria-hidden />
+                  <span className="flex-1">
+                    {t.name}
+                    {t.id === "noel" && <span className="ml-1.5 text-xs font-semibold text-muted">🎄 de saison</span>}
+                  </span>
+                  {selected === t.id && <span className="text-brand-600" aria-label="thème actuel">✓</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type Flake = { x: number; y: number; r: number; v: number; phase: number; sway: number };
+
+/** Flocons qui tombent doucement sur le thème Noël (désactivé si l'appareil demande moins d'animations). */
+export function Snowfall({ current }: { current: ThemeId }) {
+  const active = useTheme(current) === "noel";
+  const canvas = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const el = canvas.current;
+    if (!active || !el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx = el.getContext("2d");
+    if (!ctx) return;
+
+    let w = 0;
+    let h = 0;
+    let flakes: Flake[] = [];
+    const make = (y?: number): Flake => ({
+      x: Math.random() * w,
+      y: y ?? -10,
+      r: 1.2 + Math.random() * 2.6,
+      v: 0.35 + Math.random() * 0.9,
+      phase: Math.random() * Math.PI * 2,
+      sway: 0.3 + Math.random() * 0.7,
+    });
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth;
+      h = window.innerHeight;
+      el.width = w * dpr;
+      el.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = w < 640 ? 32 : 60;
+      flakes = Array.from({ length: count }, () => make(Math.random() * h));
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    let raf = 0;
+    const frame = () => {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.shadowColor = "rgba(90,110,140,0.55)";
+      ctx.shadowBlur = 3;
+      for (let i = 0; i < flakes.length; i++) {
+        const f = flakes[i];
+        f.y += f.v;
+        f.phase += 0.015;
+        f.x += Math.sin(f.phase) * f.sway;
+        if (f.y > h + 10) flakes[i] = make();
+        else if (f.x < -10) f.x = w + 10;
+        else if (f.x > w + 10) f.x = -10;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+    };
+  }, [active]);
+
+  if (!active) return null;
+  return <canvas ref={canvas} aria-hidden className="pointer-events-none fixed inset-0 z-[25] h-full w-full" />;
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Flash, NavLinks } from "@/components/client";
-import { ThemeSync } from "@/components/theme";
+import { ThemeMenu, ThemeSync } from "@/components/theme";
 import { Avatar } from "@/components/ui";
 import { getSession } from "@/lib/session";
 
@@ -30,10 +30,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <nav className="hidden flex-1 items-center gap-1 sm:flex">
             <NavLinks items={items} onBand />
           </nav>
-          <Link href="/compte" className="ml-auto flex items-center gap-2 rounded-full py-1 pl-3 pr-1 text-sm font-bold hover:bg-white/10 sm:ml-0">
-            <span className="max-w-32 truncate">{me.display_name}</span>
-            <Avatar member={me} size="sm" />
-          </Link>
+          <div className="ml-auto flex items-center gap-1 sm:ml-0">
+            <ThemeMenu current={me.theme ?? "or"} />
+            <Link href="/compte" className="flex items-center gap-2 rounded-full py-1 pl-3 pr-1 text-sm font-bold hover:bg-white/10">
+              <span className="max-w-32 truncate">{me.display_name}</span>
+              <Avatar member={me} size="sm" />
+            </Link>
+          </div>
         </div>
       </header>
 
