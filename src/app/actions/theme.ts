@@ -29,9 +29,3 @@ export async function restoreSeasonTheme(): Promise<ThemeId | null> {
   revalidatePath("/", "layout");
   return rows[0] && isTheme(rows[0].theme) ? rows[0].theme : null;
 }
-
-/** La visite guidée a été vue (ou passée) : elle ne se relance plus d'elle-même. */
-export async function finishTour(): Promise<void> {
-  const { q, me } = await getSession();
-  await q("update members set tour_done = true where id = $1 and not tour_done", [me.id]);
-}

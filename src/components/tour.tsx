@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { finishTour } from "@/app/actions/theme";
 
 type Step = { target?: string; title: string; text: string };
 
@@ -57,14 +56,20 @@ function findTarget(name: string): HTMLElement | null {
   return null;
 }
 
+const TOUR_COOKIE = "kdo-visite";
+
+function tourSeen(): boolean {
+  return document.cookie.split("; ").some((c) => c.startsWith(`${TOUR_COOKIE}=`));
+}
+
 const CARD_W = 352;
 const PAD = 6;
 
 /**
- * Visite guidée : se lance d'elle-même à la première visite de l'accueil,
- * ou depuis le compte (/?visite=1). Les étapes dont l'élément est absent sont sautées.
+ * Visite guidée : se lance d'elle-même à la première visite de l'accueil sur cet appareil
+ * (tant que le cookie « kdo-visite » n'est pas posé), ou depuis le compte (/?visite=1). Les étapes dont l'élément est absent sont sautées.
  */
-export function GuidedTour({ autoStart, isChild, name }: { autoStart: boolean; isChild: boolean; name: string }) {
+export function GuidedTour({ isChild, name }: { isChild: boolean; name: string }) {
   const pathname = usePathname();
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -76,14 +81,14 @@ export function GuidedTour({ autoStart, isChild, name }: { autoStart: boolean; i
   useEffect(() => {
     if (pathname !== "/") return;
     const replay = new URLSearchParams(window.location.search).has("visite");
-    if (replay) window.history.replaceState(null, "", "/");
-    if (!replay && (!autoStart || finished)) return;
+    if (!replay && (finished || tourSeen())) return;
     const t = setTimeout(() => {
+      if (replay) window.history.replaceState(null, "", "/");
       setSteps(stepsFor(isChild, name).filter((s) => !s.target || findTarget(s.target)));
       setIndex(0);
     }, 400);
     return () => clearTimeout(t);
-  }, [pathname, autoStart, finished, isChild, name]);
+  }, [pathname, finished, isChild, name]);
 
   const step = steps?.[index];
 
@@ -118,7 +123,7 @@ export function GuidedTour({ autoStart, isChild, name }: { autoStart: boolean; i
     setSteps(null);
     setRect(null);
     setFinished(true);
-    finishTour().catch(() => {});
+    document.cookie = `${TOUR_COOKIE}=1; path=/; max-age=${5 * 365 * 86400}; samesite=lax`;
   }
 
   if (!steps || !step) return null;

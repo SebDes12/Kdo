@@ -10,8 +10,6 @@ export type Member = {
   theme: ThemeId | null;
   /** Thème à retrouver après les fêtes (Noël activé depuis la proposition). */
   theme_restore: ThemeId | null;
-  /** Visite guidée déjà vue (ou passée). */
-  tour_done: boolean;
 };
 
 export type ParentLink = { parent_id: string; child_id: string };

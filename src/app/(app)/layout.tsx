@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="pb-24 sm:pb-10">
       <ThemeSync theme={me.theme} restore={me.theme_restore} />
-      <GuidedTour autoStart={!me.tour_done} isChild={me.is_child} name={me.display_name} />
+      <GuidedTour isChild={me.is_child} name={me.display_name} />
       <Suspense>
         <Flash />
       </Suspense>
