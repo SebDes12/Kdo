@@ -178,9 +178,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 <div
                   key={p.id}
                   id={back(p.id).slice(2)}
-                  className="mb-4 scroll-mt-20 overflow-hidden rounded-2xl border-2 border-line bg-white shadow-md"
+                  className="mb-5 scroll-mt-20 overflow-hidden rounded-2xl border-2 border-person-line bg-white shadow-[0_6px_14px_rgb(0_0_0/0.12)]"
                 >
-                  <div className="flex items-center gap-2 border-b-2 border-accent bg-brand-50 px-3 py-2.5">
+                  <div className="person-head flex items-center gap-2 border-b-2 border-person-line px-3 py-2.5">
                     <Avatar member={p} />
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate text-lg font-extrabold text-brand-700">Pour {p.display_name}</h3>

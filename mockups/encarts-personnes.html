@@ -1,0 +1,115 @@
+<title>Encarts des personnes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap">
+<style>
+/* Mise en page : quatre téléphones côte à côte (actuel + 3 variantes), tous en thème Sunset. */
+:root {
+  --shell-bg: #efedf3; --shell-fg: #1e1b24; --shell-muted: #5d5967; --shell-pick: #7b2cbf; --shell-card: #fff; --shell-line: #d8d4e0;
+  --font: "Nunito", ui-sans-serif, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --shell-bg: #17151c; --shell-fg: #eeeaf4; --shell-muted: #a8a2b4; --shell-pick: #d6a8ff; --shell-card: #211e28; --shell-line: #36323f; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --shell-bg: #17151c; --shell-fg: #eeeaf4; --shell-muted: #a8a2b4; --shell-pick: #d6a8ff; --shell-card: #211e28; --shell-line: #36323f; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--shell-bg); color: var(--shell-fg); font-family: var(--font); font-size: 15px; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; }
+h1 { font-size: 28px; font-weight: 900; margin: 0 0 6px; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { color: var(--shell-muted); margin: 0; max-width: 70ch; line-height: 1.5; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 28px 20px; margin-top: 24px; }
+.opt { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.opt-name { font-size: 17px; font-weight: 900; display: flex; gap: 8px; align-items: baseline; }
+.opt-name span { font-size: 12px; font-weight: 800; color: var(--shell-pick); text-transform: uppercase; letter-spacing: .06em; }
+.opt-desc { font-size: 13px; color: var(--shell-muted); margin: 0; line-height: 1.45; min-height: 3.2em; }
+
+/* ---------- Téléphone, thème Sunset ---------- */
+.phone {
+  --band-bg: linear-gradient(100deg,#3b1a8b 0%,#7b2cbf 38%,#c9349b 70%,#f33a7b 100%);
+  --band-ink: #fff; --accent: #ffc94d; --accent-line: linear-gradient(90deg,#f8735a,#ff9f43 50%,#ffc94d);
+  --brand-50: #fff0f3; --brand-100: #ffe0e8; --brand-200: #f7b6d6; --brand-600: #c9349b; --brand-700: #7b2cbf;
+  --btn-from: #ff9f43; --btn-to: #f33a7b; --paper: #fff6ef; --ink: #241238; --muted: #6e5470; --line: #f5d6d6;
+  border-radius: 28px; overflow: hidden; background: var(--paper); color: var(--ink);
+  border: 8px solid #111; box-shadow: 0 10px 30px rgba(0,0,0,.18); height: 720px; display: flex; flex-direction: column;
+}
+.p-head { background: var(--band-bg); color: var(--band-ink); display: flex; align-items: center; gap: 8px; padding: 12px; position: relative; flex: none; }
+.p-head::after, .z-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px; background: var(--accent-line); }
+.brand { font-weight: 900; font-size: 17px; }
+.who { margin-left: auto; font-size: 12.5px; font-weight: 800; }
+.p-main { flex: 1; overflow: hidden; padding-top: 14px; }
+.zone { border-block: 2px solid #7b2cbf; background: rgba(123,44,191,.06); }
+.z-head { background: var(--band-bg); color: #fff; padding: 9px 12px; font-weight: 900; font-size: 14.5px; position: relative; }
+.z-head span { color: var(--accent); font-size: 12px; }
+.z-body { padding: 13px 10px; }
+.av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 12px; flex: none; box-shadow: 0 0 0 2px var(--accent); }
+.idea { padding: 9px 11px; display: flex; gap: 8px; align-items: flex-start; }
+.idea + .idea { border-top: 2px solid var(--line); }
+.i-title { flex: 1; font-weight: 900; font-size: 13.5px; line-height: 1.25; }
+.i-title small { display: block; font-weight: 800; font-size: 11.5px; color: var(--brand-600); margin-top: 2px; }
+.i-price { font-size: 12px; font-weight: 800; color: var(--muted); }
+.btn { font: inherit; font-size: 11.5px; font-weight: 800; border: 0; border-radius: 9px; padding: 5px 9px; color: #fff; background: linear-gradient(180deg,var(--btn-from),var(--btn-to)); align-self: center; }
+.pp-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.pp-name { font-weight: 900; font-size: 15px; color: var(--brand-700); }
+.pp-sub { font-size: 11px; color: var(--muted); font-weight: 700; }
+.pp-act { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--brand-700); }
+
+/* Actuel */
+.v-now .person { background: #fff; border: 2px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 3px 8px rgba(0,0,0,.08); margin-bottom: 14px; }
+.v-now .pp-head { background: var(--brand-50); border-bottom: 2px solid var(--accent); }
+
+/* A : cadre coloré plus épais */
+.v-a .person { background: #fff; border: 3px solid #e7a0cf; border-radius: 16px; overflow: hidden; box-shadow: 0 6px 14px rgba(123,44,191,.16); margin-bottom: 18px; }
+.v-a .pp-head { background: var(--brand-50); border-bottom: 2px solid #e7a0cf; }
+
+/* B : liseré de couleur à gauche */
+.v-b .person { background: #fff; border: 2px solid #ecc6d8; border-left: 6px solid transparent; border-image: none; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,.08); margin-bottom: 16px; position: relative; }
+.v-b .person::before { content: ""; position: absolute; left: -6px; top: -2px; bottom: -2px; width: 6px; background: linear-gradient(180deg,#ff9f43,#f33a7b 60%,#7b2cbf); }
+.v-b .pp-head { background: var(--brand-50); border-bottom: 2px solid var(--accent); }
+
+/* C : bandeau du prénom en couleur + cadre */
+.v-c .person { background: #fff; border: 2px solid #d98bc0; border-radius: 16px; overflow: hidden; box-shadow: 0 6px 14px rgba(123,44,191,.14); margin-bottom: 18px; }
+.v-c .pp-head { background: linear-gradient(90deg,#ffe3cc,#ffd0e0); border-bottom: 2px solid #d98bc0; }
+.v-c .pp-name { color: #5a1f8f; }
+
+.note { margin-top: 28px; font-size: 13.5px; color: var(--shell-muted); max-width: 70ch; line-height: 1.5; }
+</style>
+
+<div class="wrap">
+  <h1>Encarts des personnes</h1>
+  <p class="lede">Essais sur le thème Sunset pour mieux voir où commence et où finit la liste de chaque personne sur l'accueil. Trois personnes dans le même événement : Léa, Tom et Mamie.</p>
+  <div class="grid" id="grid"></div>
+  <p class="note">Pour les autres thèmes, la variante choisie reprendra leurs propres couleurs : le cadre et le liseré suivent la couleur principale de chaque thème.</p>
+</div>
+
+<script>
+const V = [
+  { id: "now", name: "Actuel", tag: "", desc: "Cadre fin rose très pâle : sur le fond sable, les encarts se distinguent peu." },
+  { id: "a", name: "A · Cadre coloré", tag: "", desc: "Cadre plus épais dans la couleur du thème, ombre plus marquée et un peu plus d'espace entre les personnes." },
+  { id: "b", name: "B · Liseré à gauche", tag: "", desc: "Un liseré dégradé orange, rose puis violet sur le côté gauche de chaque encart, comme un marque-page." },
+  { id: "c", name: "C · Bandeau du prénom", tag: "Ma préférée", desc: "Le haut de l'encart passe en dégradé pêche-rose avec un cadre plus marqué : chaque nouvelle personne saute aux yeux." },
+];
+const P = [
+  { n: "Léa", c: ["#ffe0e8", "#c9349b"], ideas: [["Coffret aquarelle", "34 €", "cultura.com ↗"], ["Lampe lune", "22 €", ""]] },
+  { n: "Tom", c: ["#e0f2fe", "#0369a1"], ideas: [["Lego Technic", "49 €", "lego.com ↗"], ["Casque vélo", "35 €", ""]] },
+  { n: "Mamie", c: ["#ecfdf5", "#047857"], ideas: [["Plaid en laine", "40 €", ""]] },
+];
+const person = (p) => `<div class="person">
+  <div class="pp-head"><span class="av" style="background:${p.c[0]};color:${p.c[1]}">${p.n[0]}</span>
+    <span><span class="pp-name">Pour ${p.n}</span><br><span class="pp-sub">${p.ideas.length} idée${p.ideas.length > 1 ? "s" : ""} à choisir</span></span>
+    <span class="pp-act">+ Suggérer</span></div>
+  ${p.ideas.map(([t, pr, l]) => `<div class="idea"><span class="i-title">${t}${l ? `<small>${l}</small>` : ""}</span><span class="i-price">${pr}</span><button class="btn" type="button">Je le prends</button></div>`).join("")}
+</div>`;
+document.getElementById("grid").innerHTML = V.map(v => `<div class="opt">
+  <div class="opt-name">${v.name}${v.tag ? `<span>${v.tag}</span>` : ""}</div>
+  <p class="opt-desc">${v.desc}</p>
+  <div class="phone v-${v.id}" aria-label="Variante ${v.name}">
+    <div class="p-head"><span class="brand">🎁 Kdo</span><span class="who">Sébastien</span></div>
+    <div class="p-main">
+      <section class="zone">
+        <div class="z-head">🎁 Noël 2026 <span>· dans 28 jours</span></div>
+        <div class="z-body">${P.map(person).join("")}</div>
+      </section>
+    </div>
+  </div>
+</div>`).join("");
+</script>
