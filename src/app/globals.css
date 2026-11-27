@@ -18,6 +18,7 @@
   --color-nav-on: var(--nav-on);
   --color-zone2: var(--zone2);
   --color-zone3: var(--zone3);
+  --color-person-line: var(--person-line);
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -31,6 +32,8 @@
  */
 :root,
 [data-theme="or"] {
+  --person-line: #c9b3e0;
+  --person-head: linear-gradient(90deg, #fcf2d9, #ece2f7);
   --band-deco: none;
   --band-deco-size: auto;
   --brand-50: #fcf7ea;
@@ -55,6 +58,8 @@
   --zone3: #8a6f9e;
 }
 [data-theme="argent"] {
+  --person-line: #c4b6de;
+  --person-head: linear-gradient(90deg, #efeaf8, #e3dcf0);
   --band-deco: none;
   --band-deco-size: auto;
   --brand-50: #f3effa;
@@ -79,6 +84,8 @@
   --zone3: #8a6f9e;
 }
 [data-theme="sapin"] {
+  --person-line: #d9a585;
+  --person-head: linear-gradient(90deg, #fbe7d6, #e6efe5);
   --band-deco: none;
   --band-deco-size: auto;
   --brand-50: #fbf1ea;
@@ -103,6 +110,8 @@
   --zone3: #9a7b4f;
 }
 [data-theme="nuit"] {
+  --person-line: #f0a3b5;
+  --person-head: linear-gradient(90deg, #ffe4e8, #e5e4f5);
   --band-deco: none;
   --band-deco-size: auto;
   --brand-50: #fff1f2;
@@ -128,6 +137,8 @@
 }
 /* Sunset : palette GTA 6, du violet profond au rose corail, filets orange et jaune chaud */
 [data-theme="sunset"] {
+  --person-line: #d98bc0;
+  --person-head: linear-gradient(90deg, #ffe3cc, #ffd0e0);
   --band-deco: none;
   --band-deco-size: auto;
   --brand-50: #fff0f3;
@@ -185,6 +196,8 @@
 }
 /* Noël : rouge, vert houx, or */
 [data-theme="noel"] {
+  --person-line: #c9a25a;
+  --person-head: linear-gradient(90deg, #f6e7c8, #e3f0e6);
   --brand-50: #eef6f0;
   --brand-100: #dcebe0;
   --brand-200: #b5d6bf;
@@ -261,6 +274,11 @@ body {
   @apply text-band-ink;
   background: var(--band-deco, none), var(--band-bg);
   background-size: var(--band-deco-size, auto), auto;
+}
+
+/* En-tête de l'encart d'une personne sur l'accueil (dégradé clair propre à chaque thème) */
+@utility person-head {
+  background: var(--person-head);
 }
 
 /* Titre de section avec liseré d'accent */
