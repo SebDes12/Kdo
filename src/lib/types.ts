@@ -1,9 +1,15 @@
+import type { ThemeId } from "@/lib/themes";
+
 export type Member = {
   id: string;
   display_name: string;
   is_child: boolean;
   /** Pseudo de connexion d'un enfant (null si pas d'identifiant). */
   login: string | null;
+  /** Thème d'affichage choisi (null = thème par défaut). */
+  theme: ThemeId | null;
+  /** Thème à retrouver après les fêtes (Noël activé depuis la proposition). */
+  theme_restore: ThemeId | null;
 };
 
 export type ParentLink = { parent_id: string; child_id: string };

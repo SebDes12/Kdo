@@ -29,7 +29,7 @@ export const getSession = cache(async () => {
   const { meId, all, parentLinks } = await tx(async (t) => {
     const [me] = await t<{ id: string | null }>("select current_member_id() as id");
     const members = await t<Member>(
-      "select id, display_name, is_child, login from members order by display_name",
+      "select id, display_name, is_child, login, theme, theme_restore from members order by display_name",
     );
     const links = await t<ParentLink>("select parent_id, child_id from parent_links");
     return { meId: me?.id ?? null, all: members, parentLinks: links };
