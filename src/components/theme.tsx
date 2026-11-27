@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { restoreSeasonTheme, saveTheme } from "@/app/actions/theme";
-import { DEFAULT_THEME, THEME_COOKIE, THEMES, isNoelSeason, isTheme, seasonYear, type ThemeId } from "@/lib/themes";
+import { DEFAULT_THEME, NOEL_END_LABEL, THEME_COOKIE, THEMES, isNoelSeason, isTheme, seasonYear, type ThemeId } from "@/lib/themes";
 
 /** Applique le thème tout de suite (attribut sur <html>) et le mémorise dans un cookie pour le prochain affichage. */
 function applyTheme(id: ThemeId) {
@@ -156,7 +156,7 @@ export function NoelNudge() {
             🎄 Noël approche !
           </div>
           <div className="px-4 pb-4 pt-3 text-sm">
-            <p className="mb-3">Habiller Kdo aux couleurs de Noël jusqu&apos;au 6 janvier ? Tu retrouveras ensuite ton thème.</p>
+            <p className="mb-3">Habiller Kdo aux couleurs de Noël jusqu&apos;au {NOEL_END_LABEL} ? Tu retrouveras ensuite ton thème.</p>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
