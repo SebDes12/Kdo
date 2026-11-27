@@ -114,8 +114,9 @@ h2.sec { font-size: 20px; font-weight: 900; margin: 48px 0 4px; text-wrap: balan
 .t-argent { --band:#4a3657; --band-ink:#f4f2f8; --accent:#cfcfdc; --brand-50:#f3effa; --brand-600:#7b5ea7; --brand-700:#5f4787; --btn-from:#9479c4; --btn-to:#7b5ea7; --btn-ink:#fff; --paper:#f6f5f9; --ink:#1e1b24; --muted:#5b5866; --line:#d9d6e2; --zone:rgba(74,54,87,.05); --chip2:#6e6a7d; --chip2-ink:#fff; --logo-bg:#7b5ea7; }
 .t-or { --band:#4a3657; --band-ink:#f4f2f8; --accent:#d4a83a; --brand-50:#fcf7ea; --brand-600:#7b5ea7; --brand-700:#5f4787; --btn-from:#e2bb55; --btn-to:#b88a1e; --btn-ink:#2b1f33; --paper:#f6f5f9; --ink:#1e1b24; --muted:#5b5866; --line:#d9d6e2; --zone:rgba(74,54,87,.05); --chip2:#6e6a7d; --chip2-ink:#fff; --logo-bg:#7b5ea7; --nav-on-ink:#2b1f33; }
 /* Sunset : coucher de soleil sur la plage, plein jour et couleurs pastel saturées */
-.t-sunset { --band:linear-gradient(100deg,#ff8a5b 0%,#ff5a8a 55%,#c063d8 100%); --band-edge:#ff5a8a; --band-ink:#fff; --accent:#1cc9c6; --accent-line:linear-gradient(90deg,#1cc9c6,#8ef0dc); --accent-text:#fff6c9; --brand-50:#fff0ea; --brand-600:#e8467c; --brand-700:#b72f60; --link:#0b9a9c; --btn-from:#2ad6d2; --btn-to:#12a9b1; --btn-ink:#06363a; --paper:#fff6ef; --ink:#2a1630; --muted:#7a5d6e; --line:#f5d9cb; --zone:rgba(255,90,138,.07); --chip2:#1cc9c6; --chip2-ink:#06363a; --logo-bg:linear-gradient(135deg,#2ad6d2,#12a9b1); --nav-on-bg:#fff; --nav-on-ink:#e8467c; }
-.t-sunset .p-head, .t-sunset .z-head, .t-sunset .p-nav { text-shadow: 0 1px 2px rgba(120,20,60,.25); }
+.t-sunset { --band:linear-gradient(100deg,#3b1a8b 0%,#7b2cbf 38%,#c9349b 70%,#f33a7b 100%); --band-edge:#7b2cbf; --band-ink:#fff; --accent:#ffc94d; --accent-line:linear-gradient(90deg,#f8735a,#ff9f43 50%,#ffc94d); --accent-text:#ffc94d; --brand-50:#fff0f3; --brand-600:#c9349b; --brand-700:#7b2cbf; --link:#c9349b; --btn-from:#ff9f43; --btn-to:#f33a7b; --btn-ink:#fff; --paper:#fff6ef; --ink:#241238; --muted:#6e5470; --line:#f5d6d6; --zone:rgba(123,44,191,.06); --chip2:#ff9f43; --chip2-ink:#3b1a8b; --logo-bg:linear-gradient(135deg,#ff9f43,#f33a7b); --nav-on-bg:#ffc94d; --nav-on-ink:#3b1a8b; }
+.t-sunset .p-head, .t-sunset .z-head, .t-sunset .p-nav { text-shadow: 0 1px 2px rgba(40,10,80,.3); }
+.t-sunset .pp-head { background: linear-gradient(90deg,#fff0f3,#fff4e6); }
 .t-noel { --band:#a4161a; --band-ink:#fff8ee; --accent:#d4a83a; --brand-50:#eef6f0; --brand-600:#1f6f43; --brand-700:#165233; --btn-from:#d62828; --btn-to:#9d0208; --btn-ink:#fff; --paper:#fbf7ef; --ink:#1f1a17; --muted:#5e554b; --line:#e6dccb; --zone:rgba(164,22,26,.05); --chip2:#1f6f43; --chip2-ink:#fff; --logo-bg:#1f6f43; --nav-on-ink:#5a0d0f; }
 .t-noel .p-head, .t-noel .z-head, .t-noel .p-nav {
   background-color: #a4161a;
@@ -140,7 +141,7 @@ h2.sec { font-size: 20px; font-weight: 900; margin: 48px 0 4px; text-wrap: balan
 .mini { position: relative; border: 2px solid var(--shell-line); border-radius: 12px; overflow: hidden; font-size: 11.5px; font-weight: 800; text-align: center; background: var(--shell-card); color: var(--shell-fg); padding: 0 0 6px; cursor: pointer; font-family: inherit; }
 .mini.on { border-color: var(--shell-pick); box-shadow: 0 0 0 2px var(--shell-pick); }
 .mini .mb { height: 22px; background: var(--band); border-bottom: 3px solid var(--accent); }
-.t-sunset .mb { border-image: linear-gradient(90deg,#1cc9c6,#8ef0dc) 1; }
+.t-sunset .mb { border-image: linear-gradient(90deg,#f8735a,#ff9f43,#ffc94d) 1; }
 .mini .mp { height: 26px; background: var(--paper); display: grid; place-items: center; margin-bottom: 5px; }
 .mini .mbtn { width: 46%; height: 10px; border-radius: 4px; background: linear-gradient(180deg, var(--btn-from), var(--btn-to)); }
 .season { position: absolute; top: 3px; right: 3px; font-size: 9px; font-weight: 900; background: #d4a83a; color: #3a2a05; border-radius: 6px; padding: 1px 5px; }
@@ -182,7 +183,7 @@ const THEMES = [
   { id: "argent", name: "Mauve argenté", tag: "Essai n°3", desc: "Les mêmes mauves avec des touches argent. Plus doux et plus froid.", sw: ["#4a3657","#7b5ea7","#cfcfdc","#f6f5f9"] },
   { id: "sapin", name: "Sapin & cuivre", tag: "Essai n°2", desc: "Vert forêt, cuivre et or doux sur fond crème. Chaleureux et un peu rétro.", sw: ["#173f2f","#b4532a","#e9c46a","#f7f4ec"] },
   { id: "nuit", name: "Nuit", tag: "Premier thème", desc: "Indigo profond, framboise et ambre. Le plus contrasté.", sw: ["#1e1b4b","#e11d48","#fbbf24","#f4f4fa"] },
-  { id: "sunset", name: "Sunset", tag: "Nouveau · esprit GTA 6", desc: "Coucher de soleil sur la plage en plein jour : dégradé pêche, rose et violet, touches turquoise, fond sable clair.", sw: ["#ff8a5b","#ff5a8a","#c063d8","#1cc9c6"] },
+  { id: "sunset", name: "Sunset", tag: "Nouveau · esprit GTA 6", desc: "La palette de GTA 6 : ciel du violet profond au rose corail, filets orange et jaune chaud, boutons orange-rose.", sw: ["#3b1a8b","#7b2cbf","#c9349b","#f33a7b","#f8735a","#ff9f43","#ffc94d"] },
   { id: "noel", name: "Noël", tag: "Nouveau · saison", desc: "Rouge Noël et flocons, vert houx et or. Proposé aux utilisateurs à l'approche des fêtes.", sw: ["#a4161a","#1f6f43","#d4a83a","#fbf7ef"] },
 ];
 const gift = '<svg viewBox="0 0 64 64"><rect x="13" y="27" width="38" height="25" rx="3" fill="#fff"/><rect x="10" y="19" width="44" height="10" rx="3" fill="#fff"/><rect x="29" y="19" width="6" height="33" fill="#d4a83a"/><path d="M32 19c-3-7-12-9-12-3 0 3 6 3 12 3zm0 0c3-7 12-9 12-3 0 3-6 3-12 3z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></svg>';
