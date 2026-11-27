@@ -61,7 +61,8 @@ const CARD_W = 352;
 const PAD = 6;
 
 /**
- * Visite guidée : se lance d'elle-même à la première visite de l'accueil,
+ * Visite guidée : se lance d'elle-même à la première visite de l'accueil (indicateur sur le compte,
+ * donc valable sur tous les appareils),
  * ou depuis le compte (/?visite=1). Les étapes dont l'élément est absent sont sautées.
  */
 export function GuidedTour({ autoStart, isChild, name }: { autoStart: boolean; isChild: boolean; name: string }) {
@@ -76,9 +77,9 @@ export function GuidedTour({ autoStart, isChild, name }: { autoStart: boolean; i
   useEffect(() => {
     if (pathname !== "/") return;
     const replay = new URLSearchParams(window.location.search).has("visite");
-    if (replay) window.history.replaceState(null, "", "/");
     if (!replay && (!autoStart || finished)) return;
     const t = setTimeout(() => {
+      if (replay) window.history.replaceState(null, "", "/");
       setSteps(stepsFor(isChild, name).filter((s) => !s.target || findTarget(s.target)));
       setIndex(0);
     }, 400);
