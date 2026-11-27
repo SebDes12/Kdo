@@ -273,7 +273,7 @@ export function Snowfall({ current }: { current: ThemeId }) {
     const make = (y?: number): Flake => ({
       x: Math.random() * w,
       y: y ?? -10,
-      r: 1.2 + Math.random() * 2.6,
+      r: 1 + Math.random() * 1.8,
       v: 0.35 + Math.random() * 0.9,
       phase: Math.random() * Math.PI * 2,
       sway: 0.3 + Math.random() * 0.7,
@@ -285,7 +285,7 @@ export function Snowfall({ current }: { current: ThemeId }) {
       el.width = w * dpr;
       el.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const count = w < 640 ? 32 : 60;
+      const count = w < 640 ? 18 : 34;
       flakes = Array.from({ length: count }, () => make(Math.random() * h));
     };
     resize();
@@ -294,9 +294,9 @@ export function Snowfall({ current }: { current: ThemeId }) {
     let raf = 0;
     const frame = () => {
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.shadowColor = "rgba(90,110,140,0.55)";
-      ctx.shadowBlur = 3;
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.shadowColor = "rgba(90,110,140,0.4)";
+      ctx.shadowBlur = 2;
       for (let i = 0; i < flakes.length; i++) {
         const f = flakes[i];
         f.y += f.v;
