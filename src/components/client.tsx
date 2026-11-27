@@ -168,7 +168,7 @@ export function NavLinks({
   items,
   onBand = false,
 }: {
-  items: { href: string; label: string; icon: string }[];
+  items: { href: string; label: string; icon: string; tour?: string }[];
   /** Liens posés sur le bandeau de couleur (en-tête ordinateur). */
   onBand?: boolean;
 }) {
@@ -180,6 +180,7 @@ export function NavLinks({
         <Link
           key={it.href}
           href={it.href}
+          data-tour={it.tour}
           className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[11px] font-bold transition sm:flex-none sm:flex-row sm:gap-2 sm:px-3 sm:text-sm ${
             onBand
               ? isActive(it.href)

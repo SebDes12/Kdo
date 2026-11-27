@@ -210,7 +210,7 @@ export function ThemeMenu({ current }: { current: ThemeId }) {
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative" data-tour="theme">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -252,72 +252,4 @@ export function ThemeMenu({ current }: { current: ThemeId }) {
       )}
     </div>
   );
-}
-
-type Flake = { x: number; y: number; r: number; v: number; phase: number; sway: number };
-
-/** Flocons qui tombent doucement sur le thème Noël (désactivé si l'appareil demande moins d'animations). */
-export function Snowfall({ current }: { current: ThemeId }) {
-  const active = useTheme(current) === "noel";
-  const canvas = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const el = canvas.current;
-    if (!active || !el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const ctx = el.getContext("2d");
-    if (!ctx) return;
-
-    let w = 0;
-    let h = 0;
-    let flakes: Flake[] = [];
-    const make = (y?: number): Flake => ({
-      x: Math.random() * w,
-      y: y ?? -10,
-      r: 1 + Math.random() * 1.8,
-      v: 0.35 + Math.random() * 0.9,
-      phase: Math.random() * Math.PI * 2,
-      sway: 0.3 + Math.random() * 0.7,
-    });
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = window.innerWidth;
-      h = window.innerHeight;
-      el.width = w * dpr;
-      el.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const count = w < 640 ? 18 : 34;
-      flakes = Array.from({ length: count }, () => make(Math.random() * h));
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    let raf = 0;
-    const frame = () => {
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "rgba(255,255,255,0.8)";
-      ctx.shadowColor = "rgba(90,110,140,0.4)";
-      ctx.shadowBlur = 2;
-      for (let i = 0; i < flakes.length; i++) {
-        const f = flakes[i];
-        f.y += f.v;
-        f.phase += 0.015;
-        f.x += Math.sin(f.phase) * f.sway;
-        if (f.y > h + 10) flakes[i] = make();
-        else if (f.x < -10) f.x = w + 10;
-        else if (f.x > w + 10) f.x = -10;
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
-    };
-  }, [active]);
-
-  if (!active) return null;
-  return <canvas ref={canvas} aria-hidden className="pointer-events-none fixed inset-0 z-[25] h-full w-full" />;
 }

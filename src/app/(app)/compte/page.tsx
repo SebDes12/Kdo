@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { logout, updatePassword } from "@/app/actions/auth";
 import { renameMember } from "@/app/actions/family";
 import { SubmitButton } from "@/components/client";
@@ -33,6 +34,13 @@ export default async function AccountPage() {
 
       <Section title="Apparence">
         <ThemePicker current={me.theme ?? "or"} />
+      </Section>
+
+      <Section title="Visite guidée">
+        <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
+          <p className="text-sm text-muted">Revoir la présentation de Kdo, étape par étape.</p>
+          <Link href="/?visite=1" className="btn-secondary">Revoir la visite</Link>
+        </div>
       </Section>
 
       {!me.is_child && (
