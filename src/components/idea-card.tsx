@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { contribute, deleteIdea, withdraw } from "@/app/actions/ideas";
-import { ConfirmButton, SubmitButton } from "@/components/client";
+import { ConfirmButton, IdeaThumb, SubmitButton } from "@/components/client";
 import { formatPrice, hostname } from "@/lib/format";
-import type { IdeaStatus } from "@/lib/ideas";
+import { ideaImageSrc, type IdeaStatus } from "@/lib/ideas";
 import type { Idea, Member } from "@/lib/types";
 
 type Props = {
@@ -30,6 +30,7 @@ export function IdeaCard({ idea, mode, status, open, canEdit, back, member, foot
   const takenByOthers = !!st && st.total >= 100 && st.mine === 0;
   const price = formatPrice(idea.price_cents);
   const links = [...idea.idea_links].sort((a, b) => a.position - b.position);
+  const thumb = ideaImageSrc(idea, "vignette");
 
   return (
     <article
@@ -40,10 +41,7 @@ export function IdeaCard({ idea, mode, status, open, canEdit, back, member, foot
       }
     >
       <div className="flex gap-3 p-4">
-        {idea.image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={idea.image_url} alt="" className="size-16 shrink-0 rounded-xl border border-line object-cover" loading="lazy" />
-        )}
+        {thumb && <IdeaThumb thumb={thumb} full={ideaImageSrc(idea, "grande") ?? thumb} title={idea.title} />}
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
             <h3 className={`flex-1 font-extrabold leading-snug ${takenByOthers ? "text-muted line-through" : ""}`}>

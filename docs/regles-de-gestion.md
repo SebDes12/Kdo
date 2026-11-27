@@ -44,6 +44,7 @@
 |---|---|
 | Champs : **titre** (obligatoire), **description**, **1 à N liens d'achat**. | ✅ |
 | Champs optionnels : prix indicatif, priorité (★), image. | ✅ |
+| Image : **photo envoyée** (galerie, appareil photo, glisser-déposer ou coller), réduite par le navigateur avant l'envoi (grande version ≤ 1280 px, vignette 256 px, < 600 Ko), **ou adresse web**. La photo a la même visibilité que l'idée : celle d'une suggestion secrète reste invisible pour le destinataire. Plafond global de 150 Mo de photos. | ✅ |
 | Chacun peut ajouter des idées **sur sa propre liste**. | ✅ |
 | Tout membre d'un événement peut **suggérer une idée** pour quelqu'un de cet événement. Le **destinataire ne la voit jamais**. | ✅ |
 | Le destinataire peut modifier ou supprimer ses idées à tout moment, **sans notification** aux acheteurs. | ✅ |

@@ -4,6 +4,9 @@ import type { Contribution, Idea } from "@/lib/types";
 export const IDEAS_SQL = `
   select i.id, i.beneficiary_id, i.event_id, i.title, i.description, i.price_cents, i.priority,
          i.image_url, i.is_secret, i.created_by, i.created_at, i.deleted_at, i.deleted_by,
+         -- Version de la photo envoyée (jamais ses octets : servis par /idees/[id]/image)
+         (select floor(extract(epoch from im.updated_at) * 1000)::bigint::text
+          from idea_images im where im.idea_id = i.id) as image_version,
          coalesce((select json_agg(json_build_object('id', l.id, 'url', l.url, 'position', l.position)
                                    order by l.position)
                    from idea_links l where l.idea_id = i.id), '[]') as idea_links
@@ -65,3 +68,9 @@ export const PRIORITIES = [
   { value: 2, label: "★★ J'adorerais" },
   { value: 3, label: "★★★ Coup de cœur" },
 ];
+
+/** Adresse de l'image d'une idée : photo envoyée (vignette ou grande) ou adresse web. */
+export function ideaImageSrc(idea: Pick<Idea, "id" | "image_url" | "image_version">, size: "vignette" | "grande"): string | null {
+  if (idea.image_version) return `/idees/${idea.id}/image?taille=${size}&v=${idea.image_version}`;
+  return idea.image_url;
+}

@@ -36,6 +36,8 @@ export type Idea = {
   price_cents: number | null;
   priority: number;
   image_url: string | null;
+  /** Photo envoyée dans Kdo (version pour le cache), ou null. */
+  image_version: string | null;
   is_secret: boolean;
   created_by: string | null;
   created_at: string;

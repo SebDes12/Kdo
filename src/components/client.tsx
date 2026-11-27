@@ -320,3 +320,225 @@ export function LinkButton({
     </div>
   );
 }
+
+/** Réduit une image dans le navigateur (canvas) : côté le plus long ≤ max px. */
+async function shrinkImage(source: ImageBitmap | HTMLImageElement, max: number, type: string, quality: number): Promise<Blob | null> {
+  const w = source.width;
+  const h = source.height;
+  const scale = Math.min(1, max / Math.max(w, h));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillStyle = "#fff"; // fond blanc pour les images transparentes (JPEG)
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+async function decodeImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
+  try {
+    return await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    try {
+      await img.decode();
+      return img;
+    } finally {
+      URL.revokeObjectURL(img.src);
+    }
+  }
+}
+
+const PHOTO_MAX_BYTES = 580_000;
+
+/** Grande version (1280 px) + vignette (256 px), en WebP si possible, sinon JPEG. */
+async function preparePhoto(file: File): Promise<{ big: File; thumb: File }> {
+  const source = await decodeImage(file);
+  let type = "image/webp";
+  let big = await shrinkImage(source, 1280, type, 0.82);
+  if (!big || big.type !== type) {
+    type = "image/jpeg"; // navigateur sans encodeur WebP
+    big = await shrinkImage(source, 1280, type, 0.82);
+  }
+  for (const [max, q] of [[1280, 0.7], [1024, 0.7], [800, 0.65]] as const) {
+    if (!big || big.size <= PHOTO_MAX_BYTES) break;
+    big = await shrinkImage(source, max, type, q);
+  }
+  const thumb = await shrinkImage(source, 256, type, 0.75);
+  if ("close" in source) source.close();
+  if (!big || !thumb || big.size > PHOTO_MAX_BYTES) throw new Error("photo");
+  const ext = type === "image/webp" ? "webp" : "jpg";
+  return { big: new File([big], `photo.${ext}`, { type }), thumb: new File([thumb], `vignette.${ext}`, { type }) };
+}
+
+/**
+ * Photo d'une idée : choisie (galerie / appareil photo / fichier), glissée
+ * ou collée, puis réduite dans le navigateur avant l'envoi. Ou une adresse web.
+ */
+export function PhotoPicker({ photoSrc, imageUrl }: { photoSrc: string | null; imageUrl: string | null }) {
+  const bigRef = useRef<HTMLInputElement>(null);
+  const thumbRef = useRef<HTMLInputElement>(null);
+  const pickRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [removed, setRemoved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [url, setUrl] = useState(imageUrl ?? "");
+  const [over, setOver] = useState(false);
+
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  const setFiles = (big: File | null, thumb: File | null) => {
+    for (const [ref, f] of [[bigRef, big], [thumbRef, thumb]] as const) {
+      if (!ref.current) continue;
+      const dt = new DataTransfer();
+      if (f) dt.items.add(f);
+      ref.current.files = dt.files;
+    }
+  };
+
+  const handle = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/") && file.type !== "") {
+      setError("Ce fichier n'est pas une image");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const { big, thumb } = await preparePhoto(file);
+      setFiles(big, thumb);
+      setPreview(URL.createObjectURL(big));
+      setRemoved(false);
+      setUrl("");
+    } catch {
+      setError("Impossible de lire cette image (essaie en JPEG ou PNG)");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Coller une image (Ctrl+V) depuis un site ou une capture d'écran
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith("image/"));
+      if (file) {
+        e.preventDefault();
+        void handle(file);
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  });
+
+  const remove = () => {
+    setFiles(null, null);
+    setPreview(null);
+    setRemoved(true);
+    if (pickRef.current) pickRef.current.value = "";
+  };
+
+  const shown = preview ?? (!removed ? photoSrc : null) ?? (url.trim() && /^https?:\/\//i.test(url.trim()) ? url.trim() : null);
+  const hasPhoto = !!preview || (!!photoSrc && !removed);
+
+  return (
+    <div className="space-y-2">
+      <input ref={bigRef} type="file" name="photo" hidden tabIndex={-1} />
+      <input ref={thumbRef} type="file" name="photoThumb" hidden tabIndex={-1} />
+      <input type="hidden" name="removePhoto" value={removed ? "1" : ""} />
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          void handle(e.dataTransfer.files[0]);
+        }}
+        className={`flex items-center gap-3 rounded-xl border border-dashed p-3 ${over ? "border-brand-500 bg-brand-50" : "border-line"}`}
+      >
+        {shown ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={shown} alt="Aperçu" className="size-20 shrink-0 rounded-xl border border-line object-cover" />
+        ) : (
+          <div className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-2xl" aria-hidden>
+            📷
+          </div>
+        )}
+        <div className="min-w-0 flex-1 space-y-1">
+          <label className="btn-secondary cursor-pointer py-2">
+            {busy ? "Préparation…" : hasPhoto ? "Changer la photo" : "Ajouter une photo"}
+            <input
+              ref={pickRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={busy}
+              onChange={(e) => void handle(e.target.files?.[0])}
+            />
+          </label>
+          {hasPhoto && (
+            <button type="button" className="btn-ghost px-2 py-1 text-xs" onClick={remove}>
+              Retirer la photo
+            </button>
+          )}
+          <p className="hint hidden sm:block">ou glisse / colle une image ici</p>
+        </div>
+      </div>
+      {error && <p className="text-xs font-bold text-red-700">{error}</p>}
+      {!hasPhoto && (
+        <input
+          id="image"
+          name="image"
+          type="text"
+          autoCapitalize="none"
+          autoCorrect="off"
+          inputMode="url"
+          className="field"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="ou une adresse web : https://…/photo.jpg"
+          aria-label="Adresse web de l'image"
+        />
+      )}
+    </div>
+  );
+}
+
+/** Vignette d'une idée ; un clic ouvre la grande version (téléchargée seulement à ce moment). */
+export function IdeaThumb({ thumb, full, title }: { thumb: string; full: string; title: string }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [opened, setOpened] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="shrink-0 rounded-xl"
+        aria-label={`Agrandir la photo de « ${title} »`}
+        onClick={() => {
+          setOpened(true);
+          ref.current?.showModal();
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={thumb} alt="" className="size-16 rounded-xl border border-line object-cover" loading="lazy" />
+      </button>
+      <dialog
+        ref={ref}
+        onClick={() => ref.current?.close()}
+        className="m-auto max-h-[92vh] max-w-[94vw] cursor-zoom-out rounded-2xl border-0 bg-white p-0 shadow-2xl backdrop:bg-band/70 backdrop:backdrop-blur-sm open:animate-[kdo-pop_.15s_ease-out]"
+      >
+        {opened && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={full} alt={title} className="block max-h-[92vh] max-w-[94vw] object-contain" />
+        )}
+      </dialog>
+    </>
+  );
+}

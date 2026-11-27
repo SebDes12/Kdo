@@ -16,6 +16,7 @@ Les règles de gestion complètes sont dans [`docs/regles-de-gestion.md`](docs/r
 |---|---|
 | Application | Next.js 16 (App Router, Server Actions), Tailwind CSS 4, installable sur le téléphone (PWA) |
 | Base de données | Postgres sur Neon, via `pg` |
+| Photos des idées | Réduites dans le navigateur (WebP, ~150-300 Ko + vignette ~10 Ko), stockées dans Neon (`idea_images`, plafond 150 Mo), servies par `/idees/[id]/image` avec un cache navigateur d'un an : jamais lues dans les listes |
 | Comptes | Gérés par l'application : mots de passe hachés (scrypt), sessions en base, cookie `httpOnly` |
 | Sécurité | Les requêtes des utilisateurs s'exécutent sous le rôle `kdo_user` ; toutes les règles (surprise, droits parent/enfant, 100 % max) sont appliquées **dans la base** par des politiques RLS : voir [`db/migrations`](db/migrations) |
 | Hébergement | Vercel (région `fra1`) + Neon (Francfort), offres gratuites |
