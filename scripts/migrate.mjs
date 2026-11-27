@@ -4,6 +4,12 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import pg from "pg";
 
+// Les prévisualisations Vercel partagent la base de production : elles ne la modifient jamais.
+if (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") {
+  console.log(`migrate : déploiement ${process.env.VERCEL_ENV}, migrations ignorées`);
+  process.exit(0);
+}
+
 const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
 if (!url) {
   console.log("migrate : aucune DATABASE_URL, migrations ignorées");
