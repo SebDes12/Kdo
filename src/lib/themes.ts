@@ -21,14 +21,32 @@ export function themeColor(id: ThemeId): string {
   return THEMES.find((t) => t.id === id)?.color ?? THEMES[0].color;
 }
 
-/** Période où l'on propose le thème de Noël : du 15 novembre au 6 janvier. */
+/**
+ * Période du thème de Noël (jour, mois), bornes incluses : la carte « Noël approche » s'affiche
+ * pendant cette période, et le thème d'avant revient le lendemain de la fin.
+ * Pour changer les dates, il suffit de modifier ces deux lignes.
+ */
+export const NOEL_START = { day: 20, month: 11 }; // 20 novembre
+export const NOEL_END = { day: 3, month: 1 }; // 3 janvier
+
+const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+/** Date de fin lisible, ex. « 3 janvier ». */
+export const NOEL_END_LABEL = `${NOEL_END.day === 1 ? "1er" : NOEL_END.day} ${MONTHS[NOEL_END.month - 1]}`;
+
+const key = (month: number, day: number) => month * 100 + day;
+const START = key(NOEL_START.month, NOEL_START.day);
+const END = key(NOEL_END.month, NOEL_END.day);
+/** La période passe-t-elle le cap du nouvel an (ex. novembre → janvier) ? */
+const WRAPS = START > END;
+
 export function isNoelSeason(d: Date): boolean {
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  return m === 12 || (m === 11 && day >= 15) || (m === 1 && day <= 6);
+  const k = key(d.getMonth() + 1, d.getDate());
+  return WRAPS ? k >= START || k <= END : k >= START && k <= END;
 }
 
-/** Année de la saison (janvier compte pour la saison de l'année précédente). */
+/** Année de la saison (le début de l'année compte pour la saison commencée l'année précédente). */
 export function seasonYear(d: Date): number {
-  return d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear();
+  const k = key(d.getMonth() + 1, d.getDate());
+  return WRAPS && k <= END ? d.getFullYear() - 1 : d.getFullYear();
 }
