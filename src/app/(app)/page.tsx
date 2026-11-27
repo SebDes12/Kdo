@@ -93,6 +93,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       )}
 
       {upcoming.length === 0 && (
+        <div data-tour="evenement">
         <Empty icon="📅">
           Aucun événement à venir.
           {!me.is_child && (
@@ -101,6 +102,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             </div>
           )}
         </Empty>
+        </div>
       )}
 
       {upcoming.length >= 2 && (
@@ -132,7 +134,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
         return (
           <section key={e.id} id={`evt-${e.id}`} className={`-mx-4 mb-12 scroll-mt-20 border-y-2 sm:mx-0 sm:border-2 ${zone.zone}`}>
-            <div className={`flex items-center justify-between gap-3 border-b-[3px] border-accent px-4 py-3 ${zone.band}`}>
+            <div data-tour={n === 0 ? "evenement" : undefined} className={`flex items-center justify-between gap-3 border-b-[3px] border-accent px-4 py-3 ${zone.band}`}>
               <h2 className="min-w-0 truncate text-lg font-extrabold">
                 🎁 {e.name} <span className={`text-sm font-bold ${zone.accent}`}>· {eventCountdown(e)}</span>
               </h2>

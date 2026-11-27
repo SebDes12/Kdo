@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Nunito } from "next/font/google";
-import { Snowfall } from "@/components/theme";
 import { DEFAULT_THEME, THEME_COOKIE, isTheme, themeColor } from "@/lib/themes";
 import "./globals.css";
 
@@ -27,10 +26,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const theme = await readTheme();
   return (
     <html lang="fr" data-theme={theme} className={`${nunito.variable} antialiased`}>
-      <body className="font-sans">
-        {children}
-        <Snowfall current={theme} />
-      </body>
+      <body className="font-sans">{children}</body>
     </html>
   );
 }

@@ -155,16 +155,23 @@
   border-image: linear-gradient(90deg, #f8735a, #ff9f43 50%, #ffc94d) 1;
 }
 /*
- * Noël : la neige défile dans les bandeaux (trois couches à vitesses différentes ; chaque couche
- * avance d'un nombre entier de motifs par cycle pour boucler sans saut) et des sapins bordent l'en-tête.
+ * Noël : la neige défile dans l'en-tête et la barre du bas (trois couches à vitesses différentes ;
+ * chaque couche avance d'un nombre entier de motifs par cycle pour boucler sans saut),
+ * et des maisons enneigées bordent l'en-tête.
  */
 @keyframes noel-snow {
   from { background-position: 0 0, 0 0, 0 0, 0 0; }
   to { background-position: 46px 34px, -38px 60px, 60px 90px, 0 0; }
 }
+[data-theme="noel"] :is(header, nav).band {
+  --band-deco:
+    radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.5) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 65% 55%, rgb(255 255 255 / 0.65) 0 1.7px, transparent 2.4px),
+    radial-gradient(circle at 40% 75%, rgb(255 255 255 / 0.8) 0 2.3px, transparent 3px);
+  --band-deco-size: 46px 34px, 38px 60px, 60px 90px;
+}
 @media (prefers-reduced-motion: no-preference) {
-  [data-theme="noel"].band,
-  [data-theme="noel"] .band {
+  [data-theme="noel"] :is(header, nav).band {
     animation: noel-snow 6s linear infinite;
   }
 }
@@ -172,11 +179,11 @@
   content: "";
   position: absolute;
   inset: auto 0 0 0;
-  height: 18px;
+  height: 22px;
   pointer-events: none;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='18' viewBox='0 0 120 18'%3E%3Cpolygon fill='%231f7a46' points='12.0,4.0 14.8,8.9 13.4,8.9 16.0,13.8 14.0,13.8 17.0,18.0 7.0,18.0 10.0,13.8 8.0,13.8 10.6,8.9 9.2,8.9'/%3E%3Cpolygon fill='%23fff' fill-opacity='.92' points='12.0,4.0 13.3,7.4 10.7,7.4'/%3E%3Cpolygon fill='%231f7a46' points='36.0,0.0 39.6,6.3 37.8,6.3 41.2,12.6 38.6,12.6 42.5,18.0 29.5,18.0 33.4,12.6 30.8,12.6 34.2,6.3 32.4,6.3'/%3E%3Cpolygon fill='%23fff' fill-opacity='.92' points='36.0,0.0 37.7,4.3 34.3,4.3'/%3E%3Cpolygon fill='%231f7a46' points='60.0,6.0 62.4,10.2 61.2,10.2 63.5,14.4 61.7,14.4 64.3,18.0 55.7,18.0 58.3,14.4 56.5,14.4 58.8,10.2 57.6,10.2'/%3E%3Cpolygon fill='%23fff' fill-opacity='.92' points='60.0,6.0 61.1,8.9 58.9,8.9'/%3E%3Cpolygon fill='%231f7a46' points='86.0,1.0 89.4,6.9 87.7,6.9 90.9,12.9 88.4,12.9 92.1,18.0 79.9,18.0 83.6,12.9 81.1,12.9 84.3,6.9 82.6,6.9'/%3E%3Cpolygon fill='%23fff' fill-opacity='.92' points='86.0,1.0 87.6,5.1 84.4,5.1'/%3E%3Cpolygon fill='%231f7a46' points='108.0,5.0 110.6,9.6 109.3,9.6 111.7,14.1 109.9,14.1 112.7,18.0 103.3,18.0 106.1,14.1 104.3,14.1 106.7,9.6 105.4,9.6'/%3E%3Cpolygon fill='%23fff' fill-opacity='.92' points='108.0,5.0 109.2,8.1 106.8,8.1'/%3E%3C/svg%3E") repeat-x left bottom / 120px 18px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='22' viewBox='0 0 140 22'%3E%3Crect x='13.8' y='11.3' width='2.2' height='3.8' fill='%234a2617'/%3E%3Crect x='4.0' y='15.0' width='14.0' height='7.0' fill='%236b3a22'/%3E%3Cpolygon fill='%23fff' points='2.8,15.6 11.0,10.0 19.2,15.6'/%3E%3Crect x='6.5' y='16.6' width='3.1' height='3.1' rx='.4' fill='%23ffd36b'/%3E%3Crect x='12.4' y='16.6' width='3.1' height='3.1' rx='.4' fill='%23ffd36b'/%3E%3Crect x='9.6' y='18.2' width='2.8' height='3.8' fill='%233a1e12'/%3E%3Crect x='34.6' y='8.6' width='2.2' height='4.7' fill='%234a2617'/%3E%3Crect x='22.0' y='13.3' width='18.0' height='8.7' fill='%231f5a3a'/%3E%3Cpolygon fill='%23fff' points='20.8,13.9 31.0,7.0 41.2,13.9'/%3E%3Crect x='25.2' y='14.9' width='3.2' height='3.2' rx='.4' fill='%23ffd36b'/%3E%3Crect x='33.6' y='14.9' width='3.2' height='3.2' rx='.4' fill='%23ffd36b'/%3E%3Crect x='29.2' y='17.2' width='3.6' height='4.8' fill='%233a1e12'/%3E%3Crect x='52.4' y='12.2' width='2.2' height='3.5' fill='%234a2617'/%3E%3Crect x='44.0' y='15.6' width='12.0' height='6.4' fill='%2324476b'/%3E%3Cpolygon fill='%23fff' points='42.8,16.2 50.0,11.0 57.2,16.2'/%3E%3Crect x='46.2' y='17.2' width='2.6' height='2.6' rx='.4' fill='%23ffd36b'/%3E%3Crect x='48.8' y='18.5' width='2.4' height='3.5' fill='%233a1e12'/%3E%3Crect x='72.2' y='9.5' width='2.2' height='4.4' fill='%234a2617'/%3E%3Crect x='61.0' y='13.9' width='16.0' height='8.1' fill='%236b3a22'/%3E%3Cpolygon fill='%23fff' points='59.8,14.5 69.0,8.0 78.2,14.5'/%3E%3Crect x='63.9' y='15.5' width='3.2' height='3.2' rx='.4' fill='%23ffd36b'/%3E%3Crect x='70.9' y='15.5' width='3.2' height='3.2' rx='.4' fill='%23ffd36b'/%3E%3Crect x='67.4' y='17.5' width='3.2' height='4.5' fill='%233a1e12'/%3E%3Crect x='90.1' y='11.3' width='2.2' height='3.8' fill='%234a2617'/%3E%3Crect x='81.0' y='15.0' width='13.0' height='7.0' fill='%231f5a3a'/%3E%3Cpolygon fill='%23fff' points='79.8,15.6 87.5,10.0 95.2,15.6'/%3E%3Crect x='83.3' y='16.6' width='2.9' height='2.9' rx='.4' fill='%23ffd36b'/%3E%3Crect x='86.2' y='18.2' width='2.6' height='3.8' fill='%233a1e12'/%3E%3Crect x='109.9' y='8.6' width='2.2' height='4.7' fill='%234a2617'/%3E%3Crect x='98.0' y='13.3' width='17.0' height='8.7' fill='%2324476b'/%3E%3Cpolygon fill='%23fff' points='96.8,13.9 106.5,7.0 116.2,13.9'/%3E%3Crect x='101.1' y='14.9' width='3.2' height='3.2' rx='.4' fill='%23ffd36b'/%3E%3Crect x='108.7' y='14.9' width='3.2' height='3.2' rx='.4' fill='%23ffd36b'/%3E%3Crect x='104.8' y='17.2' width='3.4' height='4.8' fill='%233a1e12'/%3E%3Crect x='127.4' y='10.4' width='2.2' height='4.1' fill='%234a2617'/%3E%3Crect x='119.0' y='14.5' width='12.0' height='7.5' fill='%236b3a22'/%3E%3Cpolygon fill='%23fff' points='117.8,15.1 125.0,9.0 132.2,15.1'/%3E%3Crect x='121.2' y='16.1' width='2.6' height='2.6' rx='.4' fill='%23ffd36b'/%3E%3Crect x='123.8' y='17.9' width='2.4' height='4.1' fill='%233a1e12'/%3E%3C/svg%3E") repeat-x left bottom / 140px 22px;
 }
-/* Noël : rouge, vert houx, or, avec de discrets flocons sur les bandeaux */
+/* Noël : rouge, vert houx, or */
 [data-theme="noel"] {
   --brand-50: #eef6f0;
   --brand-100: #dcebe0;
@@ -186,11 +193,8 @@
   --brand-700: #165233;
   --band: #a4161a;
   --band-bg: #a4161a;
-  --band-deco:
-    radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.5) 0 1.2px, transparent 1.8px),
-    radial-gradient(circle at 65% 55%, rgb(255 255 255 / 0.65) 0 1.7px, transparent 2.4px),
-    radial-gradient(circle at 40% 75%, rgb(255 255 255 / 0.8) 0 2.3px, transparent 3px);
-  --band-deco-size: 46px 34px, 38px 60px, 60px 90px;
+  --band-deco: none;
+  --band-deco-size: auto;
   --band-ink: #fff8ee;
   --accent: #d4a83a;
   --nav-on: #5a0d0f;

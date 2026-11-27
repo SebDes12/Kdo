@@ -2,21 +2,23 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Flash, NavLinks } from "@/components/client";
 import { ThemeMenu, ThemeSync } from "@/components/theme";
+import { GuidedTour } from "@/components/tour";
 import { Avatar } from "@/components/ui";
 import { getSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { me } = await getSession();
   const items = [
-    { href: "/", label: "Accueil", icon: "🏠" },
-    { href: "/j-offre", label: "J'offre", icon: "🛍️" },
-    { href: `/listes/${me.id}`, label: "Ma liste", icon: "📝" },
-    ...(me.is_child ? [] : [{ href: "/famille", label: "Famille", icon: "👨‍👩‍👧" }]),
+    { href: "/", label: "Accueil", icon: "🏠", tour: "accueil" },
+    { href: "/j-offre", label: "J'offre", icon: "🛍️", tour: "j-offre" },
+    { href: `/listes/${me.id}`, label: "Ma liste", icon: "📝", tour: "ma-liste" },
+    ...(me.is_child ? [] : [{ href: "/famille", label: "Famille", icon: "👨‍👩‍👧", tour: "famille" }]),
   ];
 
   return (
     <div className="pb-24 sm:pb-10">
       <ThemeSync theme={me.theme} restore={me.theme_restore} />
+      <GuidedTour autoStart={!me.tour_done} isChild={me.is_child} name={me.display_name} />
       <Suspense>
         <Flash />
       </Suspense>
