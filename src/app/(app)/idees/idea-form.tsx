@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { saveIdea } from "@/app/actions/ideas";
-import { LinksEditor, SubmitButton } from "@/components/client";
+import { LinksEditor, PhotoPicker, SubmitButton } from "@/components/client";
 import { Notice } from "@/components/ui";
-import { PRIORITIES } from "@/lib/ideas";
+import { ideaImageSrc, PRIORITIES } from "@/lib/ideas";
 import type { EventRow, Idea, Member } from "@/lib/types";
 
 export function IdeaForm({
@@ -83,8 +83,8 @@ export function IdeaForm({
       </div>
 
       <div>
-        <label className="label" htmlFor="image">Image (adresse web, facultatif)</label>
-        <input id="image" name="image" type="text" autoCapitalize="none" autoCorrect="off" inputMode="url" className="field" defaultValue={idea?.image_url ?? ""} placeholder="https://…/photo.jpg" />
+        <span className="label">Photo (facultatif)</span>
+        <PhotoPicker photoSrc={idea?.image_version ? ideaImageSrc(idea, "vignette") : null} imageUrl={idea?.image_url ?? null} />
       </div>
 
       {isParent && (

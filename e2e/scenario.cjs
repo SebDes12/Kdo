@@ -78,6 +78,26 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
     await page.locator('nav[aria-label="Pour qui ?"] a', { hasText: name }).click();
     await page.waitForURL(/pour=/);
   };
+  // Grosse photo (3000 × 2000, bruit aléatoire : PNG de plusieurs Mo), fabriquée par le navigateur
+  const bigPhoto = async (page) => {
+    const b64 = await page.evaluate(() => {
+      const c = document.createElement("canvas"); c.width = 3000; c.height = 2000;
+      const x = c.getContext("2d"); const img = x.createImageData(3000, 2000);
+      for (let i = 0; i < img.data.length; i++) img.data[i] = (i % 4 === 3) ? 255 : (Math.random() * 255) | 0;
+      x.putImageData(img, 0, 0);
+      return c.toDataURL("image/png").split(",")[1];
+    });
+    return { name: "photo.png", mimeType: "image/png", buffer: Buffer.from(b64, "base64") };
+  };
+  const addPhoto = async (page) => {
+    const file = await bigPhoto(page);
+    ok(file.buffer.length > 3_000_000, `photo d'origine lourde (${Math.round(file.buffer.length / 1e6)} Mo)`);
+    await page.setInputFiles('input[type=file][accept="image/*"]', file);
+    await page.waitForSelector("text=Changer la photo");
+    const sizes = await page.evaluate(() => ["photo", "photoThumb"].map((n) => document.querySelector(`input[name="${n}"]`).files[0].size));
+    ok(sizes[0] <= 600_000 && sizes[1] <= 60_000, `photo réduite avant l'envoi (${Math.round(sizes[0] / 1000)} Ko + vignette ${Math.round(sizes[1] / 1000)} Ko)`);
+  };
+  const photoUrl = (page, title) => page.locator("article", { hasText: title }).locator("img").first().getAttribute("src");
   const addIdea = async (page, title, extra) => {
     await page.locator('a:visible:text-is("+ Ajouter une idée")').first().click();
     await page.fill("#title", title);
@@ -119,8 +139,17 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
     await p.fill('input[name="links"]', "www.example.com/perceuse");
     await p.fill("#price", "89,90");
     await p.selectOption("#priority", "2");
+    await addPhoto(p);
     await shot(p, "nouvelle-idee");
   });
+  const perceuseSrc = await photoUrl(papa, "Perceuse");
+  ok(/\/image\?taille=vignette&v=\d+$/.test(perceuseSrc), "vignette de la photo affichée");
+  const thumbRes = await papa.request.get(BASE + perceuseSrc);
+  ok(thumbRes.status() === 200 && /immutable/.test(thumbRes.headers()["cache-control"]), "vignette servie avec cache longue durée");
+  await papa.locator("article", { hasText: "Perceuse" }).locator("button[aria-label^='Agrandir']").click();
+  await papa.waitForSelector("dialog[open] img[src*='taille=grande']");
+  await shot(papa, "photo-agrandie");
+  await papa.keyboard.press("Escape");
   await addIdea(papa, "Casque audio");
   await shot(papa, "ma-liste");
 
@@ -137,17 +166,22 @@ const ok = (c, m) => { if (!c) throw new Error("ÉCHEC: " + m); console.log("ok 
   await maman.waitForLoadState("networkidle");
   await maman.locator('a:has-text("+ Suggérer une idée")').first().click();
   await maman.fill("#title", "Livre surprise");
+  await addPhoto(maman);
   await shot(maman, "suggestion");
   await maman.click("text=Suggérer l'idée");
   await maman.waitForURL(/ok=/);
   await shot(maman, "evenement-maman");
   ok(await maman.locator("article", { hasText: "Livre surprise" }).count() === 1, "maman voit sa suggestion");
+  const secretSrc = await photoUrl(maman, "Livre surprise");
 
   // 8. Papa ne voit rien sur sa propre liste
   await papa.goto(eventUrl); await tab(papa, "Moi");
   await shot(papa, "evenement-papa");
   ok(await papa.locator("article", { hasText: "Perceuse" }).count() === 1, "papa voit sa perceuse");
   ok(await papa.locator("text=Livre surprise").count() === 0, "papa ne voit pas la suggestion secrète");
+  for (const size of ["vignette", "grande"]) {
+    ok((await papa.request.get(BASE + secretSrc.replace("vignette", size))).status() === 404, `papa n'obtient pas la photo (${size}) de la suggestion secrète`);
+  }
   ok(await papa.locator("article").filter({ hasText: /Tu offres|Choisi par|% pris|Tu participes/ }).count() === 0, "papa ne voit aucun état choisi");
 
   // 9. Léo

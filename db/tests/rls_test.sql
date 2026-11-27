@@ -155,6 +155,47 @@ select tests.ok(tests.affected(format('update public.ideas set title = ''hack'' 
   'papa ne modifie pas la suggestion secrète');
 
 -- ---------------------------------------------------------------------
+-- Photos des idées (même visibilité que l'idée)
+-- ---------------------------------------------------------------------
+select tests.login(:MAMIE);
+insert into public.idea_images (idea_id, mime, data, thumb) values (:I_LIVRE, 'image/webp', '\x01', '\x01');
+select tests.ok((select count(*) from public.idea_images where idea_id = :I_LIVRE) = 1, 'mamie voit la photo de sa suggestion');
+select tests.refused(format('insert into public.idea_images (idea_id, mime, data, thumb) values (%L, ''image/webp'', ''\x01'', ''\x01'')', :I_PERCEUSE),
+  'poser une photo sur l''idée de quelqu''un d''autre');
+select tests.refused(format('insert into public.idea_images (idea_id, mime, data, thumb) values (%L, ''image/png'', ''\x01'', ''\x01'')', :I_LIVRE),
+  'format de photo non autorisé');
+select tests.refused(format('update public.idea_images set data = decode(repeat(''00'', 600001), ''hex'') where idea_id = %L', :I_LIVRE),
+  'photo trop lourde');
+select tests.login(:PAPA);
+insert into public.idea_images (idea_id, mime, data, thumb) values (:I_PERCEUSE, 'image/jpeg', '\x02', '\x02');
+select tests.ok((select count(*) from public.idea_images) = 1, 'papa voit la photo de sa perceuse');
+select tests.ok((select count(*) from public.idea_images where idea_id = :I_LIVRE) = 0, 'papa ne voit pas la photo de la suggestion secrète');
+select tests.ok(tests.affected(format('update public.idea_images set data = ''\x03'' where idea_id = %L', :I_LIVRE)) = 0,
+  'papa ne remplace pas la photo de la suggestion secrète');
+select tests.ok(tests.affected(format('delete from public.idea_images where idea_id = %L', :I_LIVRE)) = 0,
+  'papa ne supprime pas la photo de la suggestion secrète');
+select tests.login(:ONCLE);
+select tests.ok((select count(*) from public.idea_images) = 0, 'oncle ne voit aucune photo');
+select tests.login(:MAMAN);
+select tests.ok((select count(*) from public.idea_images) = 2, 'maman voit les 2 photos');
+select tests.ok(tests.affected(format('delete from public.idea_images where idea_id = %L', :I_PERCEUSE)) = 0,
+  'maman ne supprime pas la photo de papa');
+-- Plafond global de 150 Mo
+reset role;
+alter table public.idea_images disable trigger idea_images_guard;
+alter table public.idea_images drop constraint idea_images_data_check;
+update public.idea_images set data = convert_to(repeat('a', 150 * 1024 * 1024 - 10), 'UTF8') where idea_id = :I_PERCEUSE;
+alter table public.idea_images enable trigger idea_images_guard;
+set role kdo_user;
+select tests.login(:MAMIE);
+select tests.refused(format('update public.idea_images set data = ''\x0102030405060708090a0b0c'' where idea_id = %L', :I_LIVRE),
+  'plafond global de 150 Mo dépassé');
+reset role;
+update public.idea_images set data = '\x02' where idea_id = :I_PERCEUSE;
+alter table public.idea_images add constraint idea_images_data_check check (octet_length(data) between 1 and 600000);
+set role kdo_user;
+
+-- ---------------------------------------------------------------------
 -- Participations
 -- ---------------------------------------------------------------------
 select tests.login(:MAMAN);

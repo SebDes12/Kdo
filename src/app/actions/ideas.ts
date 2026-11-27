@@ -27,6 +27,31 @@ function normalizeUrl(raw: string): string | null {
   }
 }
 
+type Photo = { mime: "image/webp" | "image/jpeg"; data: Buffer; thumb: Buffer };
+
+/** Format reconnu d'après les premiers octets (on ne se fie pas au type annoncé). */
+function sniff(b: Buffer): Photo["mime"] | null {
+  if (b.length > 12 && b.toString("latin1", 0, 4) === "RIFF" && b.toString("latin1", 8, 12) === "WEBP") return "image/webp";
+  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  return null;
+}
+
+/**
+ * Photo envoyée par le formulaire, déjà réduite par le navigateur
+ * (grande version + vignette). undefined : pas de nouvelle photo.
+ */
+async function readPhoto(fd: FormData): Promise<Photo | null | undefined> {
+  const big = fd.get("photo");
+  const small = fd.get("photoThumb");
+  if (!(big instanceof File) || big.size === 0) return undefined;
+  if (!(small instanceof File) || small.size === 0 || big.size > 600_000 || small.size > 60_000) return null;
+  const data = Buffer.from(await big.arrayBuffer());
+  const thumb = Buffer.from(await small.arrayBuffer());
+  const mime = sniff(data);
+  if (!mime || sniff(thumb) !== mime) return null;
+  return { mime, data, thumb };
+}
+
 /** Création ou modification d'une idée (formulaire unique). */
 export async function saveIdea(fd: FormData) {
   const { tx, me, isParentOf } = await getSession();
@@ -39,6 +64,9 @@ export async function saveIdea(fd: FormData) {
   if (!title) redirectError(formPath, "Le titre est obligatoire");
   const links = fd.getAll("links").map(String).filter((l) => l.trim()).map(normalizeUrl);
   if (links.some((l) => l === null)) redirectError(formPath, "Un des liens n'est pas valide");
+  const photo = await readPhoto(fd);
+  if (photo === null) redirectError(formPath, "Photo trop lourde ou format non reconnu");
+  const removePhoto = !photo && fd.get("removePhoto") === "1";
 
   // Règle : pour soi = visible ; parent = au choix ; autre personne = secret.
   const isSecret = beneficiary === me.id ? false : isParentOf(beneficiary) ? fd.get("secret") === "on" : true;
@@ -47,7 +75,8 @@ export async function saveIdea(fd: FormData) {
     str(fd, "description") || null,
     parsePrice(str(fd, "price")),
     Math.min(3, Math.max(0, Number(fd.get("priority") ?? 0) || 0)),
-    normalizeUrl(str(fd, "image")),
+    // Une photo envoyée remplace l'adresse web
+    photo ? null : normalizeUrl(str(fd, "image")),
     str(fd, "event") || null,
     isSecret,
   ];
@@ -79,6 +108,15 @@ export async function saveIdea(fd: FormData) {
            select $1, u.url, u.ord - 1 from unnest($2::text[]) with ordinality as u(url, ord)`,
           [ideaId, links],
         );
+      }
+      if (photo) {
+        await q(
+          `insert into idea_images (idea_id, mime, data, thumb) values ($1, $2, $3, $4)
+           on conflict (idea_id) do update set mime = excluded.mime, data = excluded.data, thumb = excluded.thumb`,
+          [ideaId, photo.mime, photo.data, photo.thumb],
+        );
+      } else if (removePhoto) {
+        await q("delete from idea_images where idea_id = $1", [ideaId]);
       }
       return true;
     }),
