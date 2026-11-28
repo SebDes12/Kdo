@@ -14,6 +14,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/connexion"
   if (await currentMemberId()) redirect("/");
   const [{ n }] = await asAdmin((q) => q<{ n: number }>("select count(*)::int as n from members"));
   if (n === 0) redirect("/bienvenue");
+  const prefill = typeof sp.identifiant === "string" ? sp.identifiant.slice(0, 254) : "";
 
   return (
     <AuthCard title="Kdo" subtitle="Les idées cadeaux de la famille">
@@ -21,7 +22,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/connexion"
       <form action={login} className="space-y-4">
         <div>
           <label className="label" htmlFor="identifiant">E-mail ou pseudo</label>
-          <input id="identifiant" name="identifiant" className="field" autoComplete="username" autoCapitalize="none" required />
+          <input id="identifiant" name="identifiant" className="field" autoComplete="username" autoCapitalize="none" defaultValue={prefill} required />
         </div>
         <div>
           <label className="label" htmlFor="password">Mot de passe</label>
@@ -30,7 +31,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/connexion"
         <SubmitButton className="btn-primary w-full" pendingText="Connexion…">Se connecter</SubmitButton>
       </form>
       <p className="mt-5 text-center text-sm">
-        <Link href="/mot-de-passe-oublie" className="font-semibold text-muted hover:text-ink">Mot de passe oublié ?</Link>
+        <Link href="/mot-de-passe-oublie" className="font-semibold text-muted hover:text-ink">Mot de passe ou identifiant oublié ?</Link>
       </p>
       <p className="mt-2 text-center text-xs text-muted">Pas encore de compte ? Demande un lien d&apos;invitation à ta famille.</p>
     </AuthCard>
