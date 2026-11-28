@@ -34,7 +34,11 @@ export default async function ActivatePage({ params }: PageProps<"/activer/[toke
   if (!link) {
     // Pourquoi ce lien est-il refusé ? Utilisé / remplacé par un plus récent, ou vraiment expiré.
     const [old] = await asAdmin((q) =>
-      q<{ used: boolean }>("select used_at is not null as used from login_links where token_hash = $1", [sha256(token)]),
+      q<{ used: boolean; login: string | null }>(
+        `select l.used_at is not null as used, m.login
+         from login_links l join members m on m.id = l.member_id where l.token_hash = $1`,
+        [sha256(token)],
+      ),
     );
     if (old?.used) {
       return (
@@ -43,7 +47,17 @@ export default async function ActivatePage({ params }: PageProps<"/activer/[toke
             Ce lien a déjà servi, ou ton parent t&apos;en a envoyé un plus récent. Si ton compte est déjà activé, connecte-toi
             avec ton pseudo et ton mot de passe.
           </Notice>
-          <Link href="/connexion" className="btn-primary w-full">Me connecter</Link>
+          {old.login && (
+            <p className="mb-4 text-center text-sm">
+              Ton pseudo : <strong className="text-base">{old.login}</strong>
+            </p>
+          )}
+          <Link
+            href={old.login ? `/connexion?identifiant=${encodeURIComponent(old.login)}` : "/connexion"}
+            className="btn-primary w-full"
+          >
+            Me connecter
+          </Link>
         </AuthCard>
       );
     }

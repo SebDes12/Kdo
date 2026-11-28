@@ -5,12 +5,20 @@ import { renameMember } from "@/app/actions/family";
 import { SubmitButton } from "@/components/client";
 import { ThemePicker } from "@/components/theme";
 import { Avatar, PageHeader, Section } from "@/components/ui";
+import { asAdmin } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Mon compte" };
 
 export default async function AccountPage() {
   const { me, member, parentLinks } = await getSession();
+  const [account] = await asAdmin((q) =>
+    q<{ identifiant: string | null }>(
+      `select coalesce(a.email, m.login) as identifiant
+       from members m left join accounts a on a.member_id = m.id where m.id = $1`,
+      [me.id],
+    ),
+  );
   const parents = parentLinks.filter((l) => l.child_id === me.id).map((l) => member(l.parent_id)?.display_name).filter(Boolean);
 
   return (
@@ -23,6 +31,18 @@ export default async function AccountPage() {
         }
         subtitle={me.is_child ? `Compte enfant${parents.length ? `, géré par ${parents.join(" et ")}` : ""}` : undefined}
       />
+
+      {account?.identifiant && (
+        <Section title="Mon identifiant de connexion">
+          <div className="card p-4 text-sm">
+            <p className="break-all text-lg font-bold">{account.identifiant}</p>
+            <p className="hint mt-1">
+              {me.is_child ? "C'est ton pseudo" : "C'est ton e-mail"} : tape-le avec ton mot de passe quand tu te reconnectes
+              sur un autre appareil.
+            </p>
+          </div>
+        </Section>
+      )}
 
       <Section title="Mon prénom">
         <form action={renameMember.bind(null, me.id)} className="card flex gap-2 p-4">
