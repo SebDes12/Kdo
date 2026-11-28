@@ -201,9 +201,9 @@ export default async function FamilyPage({ searchParams }: PageProps<"/famille">
                       <LinkButton
                         label="🔑 Mot de passe"
                         title={`Nouveau mot de passe pour ${m.display_name} ?`}
-                        message="Tu vas obtenir un lien à lui envoyer (valable 2 jours). Son mot de passe actuel reste valable jusqu'à ce qu'il en choisisse un nouveau."
+                        message="Tu vas obtenir un lien à lui envoyer (valable 7 jours). Son mot de passe actuel reste valable jusqu'à ce qu'il en choisisse un nouveau."
                         confirmLabel="Créer le lien"
-                        shareText={`Envoie ce lien à ${m.display_name} (valable 2 jours, une seule fois) :`}
+                        shareText={`Envoie ce lien à ${m.display_name} (valable 7 jours, une seule fois) :`}
                         action={createResetLink.bind(null, m.id)}
                       />
                     </div>
