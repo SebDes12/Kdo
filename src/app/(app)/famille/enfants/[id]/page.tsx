@@ -47,7 +47,7 @@ export default async function ChildPage({ params }: PageProps<"/famille/enfants/
             label={`🔗 Envoyer un lien de connexion à ${child.display_name}`}
             className="btn-primary"
             title={`Lien de connexion pour ${child.display_name}`}
-            message="Le lien sert une seule fois et reste valable 7 jours. Un nouveau lien annule le précédent."
+            message="Le lien sert une seule fois et reste valable 30 jours. Un nouveau lien annule le précédent."
             confirmLabel="Créer le lien"
             shareText={`Envoie ce lien à ${child.display_name} (WhatsApp, SMS…) :`}
             action={createChildLoginLink.bind(null, id)}
